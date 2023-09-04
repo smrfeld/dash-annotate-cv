@@ -1,6 +1,10 @@
+from dash_annotate.image_source import ImageSource
+from dash_annotate.label_source import LabelSource
+
 from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
 import uuid
 from typing import List
+import plotly.express as px
 
 class AnnotateImageLabelsAIO(html.Div):
 
@@ -23,9 +27,8 @@ class AnnotateImageLabelsAIO(html.Div):
     # Define the arguments of the All-in-One component
     def __init__(
         self,
-        labels: List[str],
-        text,
-        colors=None,
+        label_source: LabelSource,
+        image_source: ImageSource,
         markdown_props=None,
         dropdown_props=None,
         aio_id=None
@@ -44,7 +47,8 @@ class AnnotateImageLabelsAIO(html.Div):
         - MarkdownWithColorAIO.ids.dropdown(aio_id)
         - MarkdownWithColorAIO.ids.markdown(aio_id)
         """
-        colors = colors if colors else ['#001f3f', '#0074D9', '#85144b', '#3D9970']
+        self.label_source = label_source
+        self.image_source = image_source
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -58,6 +62,7 @@ class AnnotateImageLabelsAIO(html.Div):
             aio_id = str(uuid.uuid4())
 
         # Merge user-supplied properties into default properties
+        '''
         dropdown_props = dropdown_props.copy() if dropdown_props else {}
         if 'options' not in dropdown_props:
             dropdown_props['options'] = [{'label': i, 'value': i} for i in colors]
@@ -69,13 +74,24 @@ class AnnotateImageLabelsAIO(html.Div):
             markdown_props['style'] = {'color': dropdown_props['value']}
         if 'children' not in markdown_props:
             markdown_props['children'] = text
-
+        
         # Define the component's layout
         super().__init__([  # Equivalent to `html.Div([...])`
             dcc.Dropdown(id=self.ids.dropdown(aio_id), **dropdown_props),
             dcc.Markdown(id=self.ids.markdown(aio_id), **markdown_props)
         ])
+        '''
 
+        super().__init__(self._create_layout()) # Equivalent to `html.Div([...])`
+
+    def _create_layout(self):
+        for img in self.image_source.iterate_over_images():
+            fig = px.imshow(img)
+            return [
+                html.H3("Drag and draw annotations"),
+                dcc.Graph(id="graph-styled-annotations", figure=fig)
+                ]
+    
     # Define this component's stateless pattern-matching callback
     # that will apply to every instance of this component.
     @callback(
