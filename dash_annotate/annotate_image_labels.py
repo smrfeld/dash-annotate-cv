@@ -5,19 +5,31 @@ from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
 import uuid
 from typing import List
 import plotly.express as px
+import dash_bootstrap_components as dbc
+from PIL import Image
 
 class AnnotateImageLabelsAIO(html.Div):
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
     class ids:
         dropdown = lambda aio_id: {
-            'component': 'MarkdownWithColorAIO',
+            'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'dropdown',
             'aio_id': aio_id
         }
         markdown = lambda aio_id: {
-            'component': 'MarkdownWithColorAIO',
+            'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'markdown',
+            'aio_id': aio_id
+        }
+        submit = lambda aio_id: {
+            'component': 'AnnotateImageLabelsAIO',
+            'subcomponent': 'submit',
+            'aio_id': aio_id
+        }
+        image = lambda aio_id: {
+            'component': 'AnnotateImageLabelsAIO',
+            'subcomponent': 'image',
             'aio_id': aio_id
         }
 
@@ -82,15 +94,40 @@ class AnnotateImageLabelsAIO(html.Div):
         ])
         '''
 
-        super().__init__(self._create_layout()) # Equivalent to `html.Div([...])`
+        super().__init__(self._create_layout(aio_id)) # Equivalent to `html.Div([...])`
 
-    def _create_layout(self):
-        for img in self.image_source.iterate_over_images():
-            fig = px.imshow(img)
-            return [
-                html.H3("Drag and draw annotations"),
-                dcc.Graph(id="graph-styled-annotations", figure=fig)
-                ]
+        self._image_iterator = self.image_source.iterate_over_images()
+        self._define_callbacks()
+    
+    def _define_callbacks(self):
+        
+        @callback(
+            Output(self.ids.image(MATCH), 'children'),
+            Input(self.ids.submit(MATCH), 'n_clicks')
+        )
+        def submit_button(submit_n_clicks):
+            try:
+                image = next(self._image_iterator)
+                return self._create_layout_for_image(image)
+            except StopIteration:
+                return html.Div("No more images")
+
+    def _create_layout(self, aio_id: str):
+        return [
+            html.H3("Drag and draw annotations"),
+            dbc.Row([
+                dbc.Col([
+                    html.Div(id=self.ids.image(aio_id))
+                ], md=6),
+                dbc.Col([
+                    dbc.Button("Submit", id=self.ids.submit(aio_id), className="mr-2")
+                ], md=6)
+            ])
+            ]
+
+    def _create_layout_for_image(self, image: Image.Image):
+        fig = px.imshow(image)
+        return dcc.Graph(id="graph-styled-annotations", figure=fig)
     
     # Define this component's stateless pattern-matching callback
     # that will apply to every instance of this component.
