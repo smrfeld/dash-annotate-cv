@@ -1,4 +1,5 @@
 from dash_annotate.annotation_storage import AnnotationStorage, AnnotationWriter
+from dash_annotate.helpers import get_trigger_id
 from dash_annotate.image_source import ImageSource, ImageIterator
 from dash_annotate.label_source import LabelSource
 
@@ -59,16 +60,6 @@ class AnnotateImageLabelsAIO(html.Div):
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
     class ids:
-        dropdown = lambda aio_id: {
-            'component': 'AnnotateImageLabelsAIO',
-            'subcomponent': 'dropdown',
-            'aio_id': aio_id
-        }
-        markdown = lambda aio_id: {
-            'component': 'AnnotateImageLabelsAIO',
-            'subcomponent': 'markdown',
-            'aio_id': aio_id
-        }
         dropdown = lambda aio_id: {
             'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'dropdown',
@@ -186,15 +177,11 @@ class AnnotateImageLabelsAIO(html.Div):
             Input(self.ids.dropdown(MATCH), 'value')
             )
         def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks, dropdown_value):
-            # Figure out which button was pressed
-            ctx = dash.callback_context
-            button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-            if button_id != "":
-                button_id = json.loads(button_id)["subcomponent"]
-            print(f"Clicked button: '{button_id}'")
+            trigger_id = get_trigger_id()
+            print(f"Trigger: '{trigger_id}'")
 
             try:
-                if button_id == self.ids.next_submit(MATCH)["subcomponent"] or button_id == "":
+                if trigger_id == self.ids.next_submit(MATCH)["subcomponent"] or trigger_id == "":
                     # Submit button was pressed
 
                     # Store the annotation
@@ -216,25 +203,26 @@ class AnnotateImageLabelsAIO(html.Div):
                     # Load the next image
                     self.curr_image_name, image = self._image_iterator.next()
                 
-                elif button_id == self.ids.next_skip(MATCH)["subcomponent"]:
+                elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
                     self.curr_image_name, image = self._image_iterator.next()
                 
-                elif button_id == self.ids.prev(MATCH)["subcomponent"]:
+                elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
                     self.curr_image_name, image = self._image_iterator.prev()
                 
-                elif button_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
+                elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
                     # Next missing annotation button was pressed
                     self.curr_image_name, image = self._image_iterator.next()
                     while self.curr_image_name in self.annotations.image_to_entry:
                         self.curr_image_name, image = self._image_iterator.next()
 
-                elif button_id == self.ids.dropdown(MATCH)["subcomponent"]:
+                elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
+                    # Dropdown was changed
                     return self._curr_image_layout
 
                 else:
-                    raise NotImplementedError(f"Unknown button pressed: {button_id}")
+                    raise NotImplementedError(f"Unknown button pressed: {trigger_id}")
 
                 self._curr_image_layout = self._create_layout_for_image(image)
                 return self._curr_image_layout
