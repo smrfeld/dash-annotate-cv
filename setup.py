@@ -10,7 +10,7 @@ setup(
     description="A Python library for computer vision annotation tasks using Dash",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/dash_annotate",
+    url="https://github.com/smrfeld/dash-annotate-cv",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
