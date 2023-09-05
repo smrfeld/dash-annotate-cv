@@ -5,6 +5,12 @@ from typing import Optional, List, Iterator, Tuple
 from PIL import Image
 import os
 
+class IndexBelowError(Exception):
+    pass
+
+class IndexAboveError(Exception):
+    pass
+
 @dataclass
 class ImageSource:
 
@@ -39,14 +45,14 @@ class ImageIterator:
             import glob
             assert image_source.folder_name is not None, "folder_name must be set if source_type is FOLDER"
             self._file_names = glob.glob(os.path.join(image_source.folder_name,image_source.folder_pattern))
-            self._max_idx = len(self._file_names)
+            self._no_images = len(self._file_names)
         elif image_source.source_type == ImageSource.Type.LIST_OF_FILES:
             assert image_source.list_of_files is not None, "list_of_files must be set if source_type is LIST_OF_FILES"
             self._file_names = image_source.list_of_files
-            self._max_idx = len(self._file_names)
+            self._no_images = len(self._file_names)
         else:
             assert image_source.images is not None, "images must be set if source_type is DEFAULT"
-            self._max_idx = len(image_source.images)
+            self._no_images = len(image_source.images)
     
     def _image_at_idx(self, idx: int) -> Tuple[str,Image.Image]:
         print("Loading image at index", idx)
@@ -58,21 +64,21 @@ class ImageIterator:
             return self._file_names[idx], Image.open(self._file_names[idx])
 
     def next(self) -> Tuple[str,Image.Image]:
-        if self.idx_of_curr_img >= self._max_idx-1:
-            self.idx_of_curr_img = self._max_idx
-            raise StopIteration
+        if self.idx_of_curr_img >= self._no_images-1:
+            self.idx_of_curr_img = self._no_images
+            raise IndexAboveError
         
-        try:
-            self.idx_of_curr_img += 1
-            result = self._image_at_idx(self.idx_of_curr_img)
-        except IndexError:
-            raise StopIteration
+        self.idx_of_curr_img += 1
+        if self.idx_of_curr_img >= self._no_images:
+            raise IndexAboveError
+        result = self._image_at_idx(self.idx_of_curr_img)
+
         return result
 
     def prev(self) -> Tuple[str,Image.Image]:
         if self.idx_of_curr_img <= 0:
             self.idx_of_curr_img = -1
-            raise StopIteration
+            raise IndexBelowError
         
         self.idx_of_curr_img -= 1
         result = self._image_at_idx(self.idx_of_curr_img)

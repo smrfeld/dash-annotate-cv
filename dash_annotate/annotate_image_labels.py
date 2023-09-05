@@ -1,6 +1,6 @@
 from dash_annotate.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate.helpers import get_trigger_id
-from dash_annotate.image_source import ImageSource, ImageIterator
+from dash_annotate.image_source import ImageSource, ImageIterator, IndexAboveError, IndexBelowError
 from dash_annotate.label_source import LabelSource
 
 from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
@@ -58,6 +58,11 @@ class AnnotateImageLabelsAIO(html.Div):
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
     class ids:
+        buttons = lambda aio_id: {
+            'component': 'AnnotateImageLabelsAIO',
+            'subcomponent': 'buttons',
+            'aio_id': aio_id
+        }
         dropdown = lambda aio_id: {
             'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'dropdown',
@@ -125,7 +130,7 @@ class AnnotateImageLabelsAIO(html.Div):
         self.curr_image_name: Optional[str] = None
         self.options = options
         self.annotation_writer = AnnotationWriter(annotation_storage)
-        self._curr_image_layout = None
+        self._curr_image_layout, self._curr_button_layout = None, None
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -136,7 +141,9 @@ class AnnotateImageLabelsAIO(html.Div):
             # use a stateless pattern-matching callback:
             # The actual ID does not matter as long as its unique and matches
             # the PMC `MATCH` pattern..
-            aio_id = str(uuid.uuid4())
+            self.aio_id = str(uuid.uuid4())
+        else:
+            self.aio_id = aio_id
 
         # Merge user-supplied properties into default properties
         '''
@@ -159,7 +166,7 @@ class AnnotateImageLabelsAIO(html.Div):
         ])
         '''
 
-        super().__init__(self._create_layout(aio_id)) # Equivalent to `html.Div([...])`
+        super().__init__(self._create_layout(self.aio_id)) # Equivalent to `html.Div([...])`
 
         self._image_iterator = ImageIterator(self.image_source)
         self._define_callbacks()
@@ -168,8 +175,8 @@ class AnnotateImageLabelsAIO(html.Div):
         
         @callback(
             Output(self.ids.image(MATCH), 'children'),
-            Output(self.ids.next_submit(MATCH), 'disabled'),
-            Output(self.ids.next_submit(MATCH), 'color'),
+            Output(self.ids.buttons(MATCH), 'children'),
+            Output(self.ids.dropdown(MATCH), 'value'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -177,7 +184,7 @@ class AnnotateImageLabelsAIO(html.Div):
             Input(self.ids.dropdown(MATCH), 'value')
             )
         def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks, dropdown_value):
-            label_chosen = dropdown_value is not None and dropdown_value in self.labels
+            new_dropdown_value = dropdown_value
             trigger_id = get_trigger_id()
             print(f"Trigger: '{trigger_id}'")
 
@@ -206,16 +213,20 @@ class AnnotateImageLabelsAIO(html.Div):
                     # Load the next image
                     self.curr_image_name, image = self._image_iterator.next()
                     self._curr_image_layout = self._create_layout_for_image(image)
+                    new_dropdown_value = None
+                    print("New dropdown value", new_dropdown_value)
 
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
                     self.curr_image_name, image = self._image_iterator.next()
                     self._curr_image_layout = self._create_layout_for_image(image)
+                    new_dropdown_value = None
 
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
                     self.curr_image_name, image = self._image_iterator.prev()
                     self._curr_image_layout = self._create_layout_for_image(image)
+                    new_dropdown_value = None
 
                 elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
                     # Next missing annotation button was pressed
@@ -224,6 +235,7 @@ class AnnotateImageLabelsAIO(html.Div):
                         self.curr_image_name, image = self._image_iterator.next()
                     if image is not None:
                         self._curr_image_layout = self._create_layout_for_image(image)
+                    new_dropdown_value = None
 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
@@ -232,10 +244,46 @@ class AnnotateImageLabelsAIO(html.Div):
                 else:
                     print(f"Unknown button pressed: {trigger_id}")
 
-                return self._curr_image_layout, not label_chosen, "secondary" if not label_chosen else "success"
-            except StopIteration:
-                return html.Div("No more images"), False, "secondary"
+                if new_dropdown_value is not None and new_dropdown_value in self.labels:
+                    self._curr_button_layout = self._create_layout_buttons(
+                        aio_id=self.aio_id, 
+                        enable_next_save=True, 
+                        enable_prev=True, 
+                        enable_skip=True, 
+                        enable_skip_next_missing=True
+                        )
+                else:
+                    self._curr_button_layout = self._create_layout_buttons(
+                        aio_id=self.aio_id, 
+                        enable_next_save=False, 
+                        enable_prev=True, 
+                        enable_skip=True, 
+                        enable_skip_next_missing=True
+                        )
 
+            except IndexAboveError:
+                self._curr_image_layout = html.Div("No more images")
+                self._curr_button_layout = self._create_layout_buttons(
+                    aio_id=self.aio_id, 
+                    enable_next_save=False, 
+                    enable_prev=True, 
+                    enable_skip=False, 
+                    enable_skip_next_missing=False
+                    )
+
+            except IndexBelowError:
+                self._curr_image_layout = html.Div("No more images")
+                self._curr_button_layout = self._create_layout_buttons(
+                    aio_id=self.aio_id, 
+                    enable_next_save=True, 
+                    enable_prev=False, 
+                    enable_skip=True, 
+                    enable_skip_next_missing=True
+                    )
+
+            print("Returning new dropdown value", new_dropdown_value)
+            return self._curr_image_layout, self._curr_button_layout, new_dropdown_value
+    
     def _create_layout(self, aio_id: str):
         return dbc.Row([
             dbc.Col([
@@ -243,21 +291,39 @@ class AnnotateImageLabelsAIO(html.Div):
             ], md=6),
             dbc.Col([
                 dbc.Row(dcc.Dropdown(self.labels, id=self.ids.dropdown(aio_id))),
-                self._create_next_prev_row(aio_id),
-                self._create_next_alt_row(aio_id)
+                html.Hr(),
+                html.Div([self._create_layout_buttons(aio_id)], id=self.ids.buttons(aio_id))
             ], md=6)
         ])
 
-    def _create_next_prev_row(self, aio_id: str):
-        return dbc.Row([
-            dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style={"width": "100%"}), md=6),
-            dbc.Col(dbc.Button("Next (save)", color="secondary", id=self.ids.next_submit(aio_id), style={"width": "100%"}), md=6)
-        ])
-
-    def _create_next_alt_row(self, aio_id: str):
-        return dbc.Row([
-            dbc.Col(dbc.Button("Skip", color="dark", id=self.ids.next_skip(aio_id), style={"width": "100%"}), md=6),
-            dbc.Col(dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style={"width": "100%"}), md=6),
+    def _create_layout_buttons(self, aio_id: str, enable_next_save: bool = False, enable_prev: bool=False, enable_skip: bool = False, enable_skip_next_missing: bool = False):
+        style_prev = {"width": "100%"} 
+        style_next_save = {"width": "100%"} 
+        style_skip = {"width": "100%"} 
+        style_next_missing_annotation = {"width": "100%"} 
+        if not enable_prev:
+            style_prev["display"] = "none"
+        if not enable_next_save:
+            style_next_save["display"] = "none"
+        if not enable_skip:
+            style_skip["display"] = "none"
+        if not enable_skip_next_missing:
+            style_next_missing_annotation["display"] = "none"
+        
+        return dbc.Col([
+            dbc.Row([
+                dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev), md=6),
+                dbc.Col(dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save), md=6)
+                ]),
+            html.Hr(),
+            dbc.Row([
+                dbc.Col([],md=6),
+                dbc.Col(dbc.Button("Skip", color="dark", id=self.ids.next_skip(aio_id), style=style_skip), md=6),
+                ]),
+            dbc.Row([
+                dbc.Col([],md=6),
+                dbc.Col(dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style=style_next_missing_annotation), md=6),
+            ])
         ])
 
     def _create_layout_for_image(self, image: Image.Image):

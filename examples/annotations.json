@@ -3,8 +3,22 @@
       "chelsea": {
          "image_name": "chelsea",
          "label": {
+            "single": "camera",
+            "timestamp": 1693887024.847148
+         }
+      },
+      "astronaut": {
+         "image_name": "astronaut",
+         "label": {
             "single": "astronaut",
-            "timestamp": 1693885049.592338
+            "timestamp": 1693887027.364071
+         }
+      },
+      "camera": {
+         "image_name": "camera",
+         "label": {
+            "single": "cat",
+            "timestamp": 1693887030.358168
          }
       }
    }
