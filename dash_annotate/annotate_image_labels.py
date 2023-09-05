@@ -13,8 +13,6 @@ from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
 from enum import Enum
-import dash
-import json
 import datetime
 import os
 
@@ -183,8 +181,10 @@ class AnnotateImageLabelsAIO(html.Div):
             trigger_id = get_trigger_id()
             print(f"Trigger: '{trigger_id}'")
 
+            is_initial = trigger_id == "" and self.curr_image_name is None
+
             try:
-                if trigger_id == self.ids.next_submit(MATCH)["subcomponent"] or trigger_id == "":
+                if trigger_id == self.ids.next_submit(MATCH)["subcomponent"] or is_initial:
                     # Submit button was pressed
 
                     # Store the annotation
@@ -230,7 +230,7 @@ class AnnotateImageLabelsAIO(html.Div):
                     pass
 
                 else:
-                    raise NotImplementedError(f"Unknown button pressed: {trigger_id}")
+                    print(f"Unknown button pressed: {trigger_id}")
 
                 return self._curr_image_layout, not label_chosen, "secondary" if not label_chosen else "success"
             except StopIteration:
@@ -250,13 +250,13 @@ class AnnotateImageLabelsAIO(html.Div):
 
     def _create_next_prev_row(self, aio_id: str):
         return dbc.Row([
-            dbc.Col(dbc.Button("Previous image", color="secondary", id=self.ids.prev(aio_id), style={"width": "100%"}), md=6),
+            dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style={"width": "100%"}), md=6),
             dbc.Col(dbc.Button("Next (save)", color="secondary", id=self.ids.next_submit(aio_id), style={"width": "100%"}), md=6)
         ])
 
     def _create_next_alt_row(self, aio_id: str):
         return dbc.Row([
-            dbc.Col(dbc.Button("Skip", color="secondary", id=self.ids.next_skip(aio_id), style={"width": "100%"}), md=6),
+            dbc.Col(dbc.Button("Skip", color="dark", id=self.ids.next_skip(aio_id), style={"width": "100%"}), md=6),
             dbc.Col(dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style={"width": "100%"}), md=6),
         ])
 

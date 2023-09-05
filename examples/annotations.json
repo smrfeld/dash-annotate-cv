@@ -1,3 +1,11 @@
 {
-   "image_to_entry": {}
+   "image_to_entry": {
+      "chelsea": {
+         "image_name": "chelsea",
+         "label": {
+            "single": "astronaut",
+            "timestamp": 1693885049.592338
+         }
+      }
+   }
 }

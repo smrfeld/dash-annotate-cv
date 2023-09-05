@@ -9,3 +9,9 @@ Roadmap for future tasks:
 * Annotating bounding boxes
 * Annotating videos
 * Annotating tags
+
+**Note**: this library is not meant for production usage. It is meant to be used for quick prototyping and testing of annotation tasks.
+
+## Example
+
+You can also check out the [examples](examples).
