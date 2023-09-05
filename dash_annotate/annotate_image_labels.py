@@ -170,6 +170,8 @@ class AnnotateImageLabelsAIO(html.Div):
         
         @callback(
             Output(self.ids.image(MATCH), 'children'),
+            Output(self.ids.next_submit(MATCH), 'disabled'),
+            Output(self.ids.next_submit(MATCH), 'color'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -177,6 +179,7 @@ class AnnotateImageLabelsAIO(html.Div):
             Input(self.ids.dropdown(MATCH), 'value')
             )
         def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks, dropdown_value):
+            label_chosen = dropdown_value is not None and dropdown_value in self.labels
             trigger_id = get_trigger_id()
             print(f"Trigger: '{trigger_id}'")
 
@@ -202,32 +205,36 @@ class AnnotateImageLabelsAIO(html.Div):
 
                     # Load the next image
                     self.curr_image_name, image = self._image_iterator.next()
-                
+                    self._curr_image_layout = self._create_layout_for_image(image)
+
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
                     self.curr_image_name, image = self._image_iterator.next()
-                
+                    self._curr_image_layout = self._create_layout_for_image(image)
+
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
                     self.curr_image_name, image = self._image_iterator.prev()
-                
+                    self._curr_image_layout = self._create_layout_for_image(image)
+
                 elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
                     # Next missing annotation button was pressed
-                    self.curr_image_name, image = self._image_iterator.next()
+                    image = None
                     while self.curr_image_name in self.annotations.image_to_entry:
                         self.curr_image_name, image = self._image_iterator.next()
+                    if image is not None:
+                        self._curr_image_layout = self._create_layout_for_image(image)
 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
-                    return self._curr_image_layout
+                    pass
 
                 else:
                     raise NotImplementedError(f"Unknown button pressed: {trigger_id}")
 
-                self._curr_image_layout = self._create_layout_for_image(image)
-                return self._curr_image_layout
+                return self._curr_image_layout, not label_chosen, "secondary" if not label_chosen else "success"
             except StopIteration:
-                return html.Div("No more images")
+                return html.Div("No more images"), False, "secondary"
 
     def _create_layout(self, aio_id: str):
         return dbc.Row([
@@ -244,13 +251,13 @@ class AnnotateImageLabelsAIO(html.Div):
     def _create_next_prev_row(self, aio_id: str):
         return dbc.Row([
             dbc.Col(dbc.Button("Previous image", color="secondary", id=self.ids.prev(aio_id), style={"width": "100%"}), md=6),
-            dbc.Col(dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style={"width": "100%"}), md=6)
+            dbc.Col(dbc.Button("Next (save)", color="secondary", id=self.ids.next_submit(aio_id), style={"width": "100%"}), md=6)
         ])
 
     def _create_next_alt_row(self, aio_id: str):
         return dbc.Row([
             dbc.Col(dbc.Button("Skip", color="secondary", id=self.ids.next_skip(aio_id), style={"width": "100%"}), md=6),
-            dbc.Col(dbc.Button("Skip to missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style={"width": "100%"}), md=6),
+            dbc.Col(dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style={"width": "100%"}), md=6),
         ])
 
     def _create_layout_for_image(self, image: Image.Image):

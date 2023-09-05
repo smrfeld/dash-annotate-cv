@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     # Set up the image and label sources
     image_source = ImageSource(images=images)
-    label_source = LabelSource(labels=["cat", "dog", "bird"])
+    label_source = LabelSource(labels=["astronaut", "camera", "cat"])
 
     # Set up writing
     storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
