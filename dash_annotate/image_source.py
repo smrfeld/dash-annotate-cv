@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
 from enum import Enum
-from typing import Optional, List, Iterator
+from typing import Optional, List, Iterator, Tuple
 from PIL import Image
 import os
 
@@ -14,7 +14,7 @@ class ImageSource:
         LIST_OF_FILES = "list_of_files"
 
     source_type: Type = Type.DEFAULT
-    images: Optional[List[Image.Image]] = None
+    images: Optional[List[Tuple[str,Image.Image]]] = None
     folder_name: Optional[str] = None
     folder_pattern: str = "*.jpg"
     list_of_files: Optional[List[str]] = None
@@ -29,19 +29,54 @@ class ImageSource:
         else:
             raise NotImplementedError
 
-    def iterate_over_images(self) -> Iterator[Image.Image]:
-        if self.source_type == ImageSource.Type.DEFAULT:
-            assert self.images is not None, "images must be set if source_type is DEFAULT"
-            for image in self.images:
-                yield image
-        elif self.source_type == ImageSource.Type.FOLDER:
+class ImageIterator:
+    def __init__(self, image_source: ImageSource):
+        self.image_source = image_source
+        self.idx_of_curr_img = -1
+
+        self._file_names = None
+        if image_source.source_type == ImageSource.Type.FOLDER:
             import glob
-            assert self.folder_name is not None, "folder_name must be set if source_type is FOLDER"
-            for filename in glob.glob(os.path.join(self.folder_name,self.folder_pattern)):
-                yield Image.open(filename)
-        elif self.source_type == ImageSource.Type.LIST_OF_FILES:
-            assert self.list_of_files is not None, "list_of_files must be set if source_type is LIST_OF_FILES"
-            for filename in self.list_of_files:
-                yield Image.open(filename)
+            assert image_source.folder_name is not None, "folder_name must be set if source_type is FOLDER"
+            self._file_names = glob.glob(os.path.join(image_source.folder_name,image_source.folder_pattern))
+            self._max_idx = len(self._file_names)
+        elif image_source.source_type == ImageSource.Type.LIST_OF_FILES:
+            assert image_source.list_of_files is not None, "list_of_files must be set if source_type is LIST_OF_FILES"
+            self._file_names = image_source.list_of_files
+            self._max_idx = len(self._file_names)
         else:
-            raise NotImplementedError
+            assert image_source.images is not None, "images must be set if source_type is DEFAULT"
+            self._max_idx = len(image_source.images)
+    
+    def _image_at_idx(self, idx: int) -> Tuple[str,Image.Image]:
+        print("Loading image at index", idx)
+        if self.image_source.source_type == ImageSource.Type.DEFAULT:
+            assert self.image_source.images is not None, "images must be set if source_type is DEFAULT"
+            return self.image_source.images[idx]
+        else:
+            assert self._file_names is not None, "file_names must be set if source_type is not DEFAULT"
+            return self._file_names[idx], Image.open(self._file_names[idx])
+
+    def next(self) -> Tuple[str,Image.Image]:
+        if self.idx_of_curr_img >= self._max_idx-1:
+            self.idx_of_curr_img = self._max_idx
+            raise StopIteration
+        
+        try:
+            self.idx_of_curr_img += 1
+            result = self._image_at_idx(self.idx_of_curr_img)
+        except IndexError:
+            raise StopIteration
+        return result
+
+    def prev(self) -> Tuple[str,Image.Image]:
+        if self.idx_of_curr_img <= 0:
+            self.idx_of_curr_img = -1
+            raise StopIteration
+        
+        self.idx_of_curr_img -= 1
+        result = self._image_at_idx(self.idx_of_curr_img)
+        return result
+
+    def __iter__(self):
+        return self
