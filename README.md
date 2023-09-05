@@ -70,3 +70,5 @@ app.layout = dbc.Container([
     ])
 app.run(debug=True)
 ```
+
+The result is shown in the gif above.
