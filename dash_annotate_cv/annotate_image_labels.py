@@ -290,6 +290,7 @@ class AnnotateImageLabelsAIO(html.Div):
 
             except IndexAboveError:
                 self._curr_image_layout = html.Div()
+                self._curr_alert_layout = dbc.Alert("Finished all images",color="success")
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
                     curr_dropdown=None,
@@ -299,10 +300,10 @@ class AnnotateImageLabelsAIO(html.Div):
                     enable_skip=False, 
                     enable_skip_next_missing=False
                     )
-                self._curr_alert_layout = dbc.Alert("Finished all images",color="success")
 
             except IndexBelowError:
                 self._curr_image_layout = html.Div()
+                self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
                     curr_dropdown=None,
@@ -312,7 +313,6 @@ class AnnotateImageLabelsAIO(html.Div):
                     enable_skip=True, 
                     enable_skip_next_missing=True
                     )
-                self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
 
             print("Returning new dropdown value", new_dropdown_value)
             return self._curr_image_layout, self._curr_button_layout

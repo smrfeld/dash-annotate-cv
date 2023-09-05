@@ -2,6 +2,8 @@
 
 `dash_annotate_cv` is a Python Dash library for computer vision annotation tasks.
 
+![](readme_gif.gif)
+
 Supported tasks:
 * Annotation of images (whole image labels)
 

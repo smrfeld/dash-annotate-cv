@@ -4,25 +4,25 @@
          "image_name": "chelsea",
          "label": {
             "single": "cat",
-            "timestamp": 1693893437.398108
+            "timestamp": 1693893968.634796
          },
          "history": [
             {
                "single": "cat",
-               "timestamp": 1693893437.398108
+               "timestamp": 1693893968.634796
             }
          ]
       },
       "camera": {
          "image_name": "camera",
          "label": {
-            "single": "cat",
-            "timestamp": 1693893446.275495
+            "single": "camera",
+            "timestamp": 1693893977.097665
          },
          "history": [
             {
-               "single": "cat",
-               "timestamp": 1693893446.275495
+               "single": "camera",
+               "timestamp": 1693893977.097665
             }
          ]
       }
