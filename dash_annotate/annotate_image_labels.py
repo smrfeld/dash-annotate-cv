@@ -182,7 +182,6 @@ class AnnotateImageLabelsAIO(html.Div):
             Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.buttons(MATCH), 'children'),
             Output(self.ids.alert(MATCH), 'children'),
-            Output(self.ids.dropdown(MATCH), 'value'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -259,6 +258,8 @@ class AnnotateImageLabelsAIO(html.Div):
                 if new_dropdown_value is not None and new_dropdown_value in self.labels:
                     self._curr_button_layout = self._create_layout_buttons(
                         aio_id=self.aio_id, 
+                        curr_dropdown=new_dropdown_value,
+                        enable_dropdown=True,
                         enable_next_save=True, 
                         enable_prev=True, 
                         enable_skip=True, 
@@ -267,6 +268,8 @@ class AnnotateImageLabelsAIO(html.Div):
                 else:
                     self._curr_button_layout = self._create_layout_buttons(
                         aio_id=self.aio_id, 
+                        curr_dropdown=new_dropdown_value,
+                        enable_dropdown=True,
                         enable_next_save=False, 
                         enable_prev=True, 
                         enable_skip=True, 
@@ -277,6 +280,8 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_image_layout = html.Div()
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
+                    curr_dropdown=None,
+                    enable_dropdown=False,
                     enable_next_save=False, 
                     enable_prev=True, 
                     enable_skip=False, 
@@ -288,6 +293,8 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_image_layout = html.Div()
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
+                    curr_dropdown=None,
+                    enable_dropdown=False,
                     enable_next_save=True, 
                     enable_prev=False, 
                     enable_skip=True, 
@@ -296,7 +303,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
 
             print("Returning new dropdown value", new_dropdown_value)
-            return self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout, new_dropdown_value
+            return self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout
     
     def _alert_for_existing_dropdown(self, new_dropdown_value: Optional[str]):
         if new_dropdown_value is not None and new_dropdown_value in self.labels:
@@ -318,17 +325,17 @@ class AnnotateImageLabelsAIO(html.Div):
             ], md=6),
             dbc.Col([
                 html.Div(id=self.ids.alert(aio_id)),
-                dbc.Row(dcc.Dropdown(self.labels, id=self.ids.dropdown(aio_id))),
                 html.Hr(),
                 html.Div([self._create_layout_buttons(aio_id)], id=self.ids.buttons(aio_id))
             ], md=6)
         ])
 
-    def _create_layout_buttons(self, aio_id: str, enable_next_save: bool = False, enable_prev: bool=False, enable_skip: bool = False, enable_skip_next_missing: bool = False):
+    def _create_layout_buttons(self, aio_id: str, curr_dropdown: Optional[str] = None, enable_dropdown: bool = False, enable_next_save: bool = False, enable_prev: bool=False, enable_skip: bool = False, enable_skip_next_missing: bool = False):
         style_prev = {"width": "100%"} 
         style_next_save = {"width": "100%"} 
         style_skip = {"width": "100%"} 
         style_next_missing_annotation = {"width": "100%"} 
+        style_dropdown = {}
         if not enable_prev:
             style_prev["display"] = "none"
         if not enable_next_save:
@@ -337,8 +344,12 @@ class AnnotateImageLabelsAIO(html.Div):
             style_skip["display"] = "none"
         if not enable_skip_next_missing:
             style_next_missing_annotation["display"] = "none"
-        
+        if not enable_dropdown:
+            style_dropdown["display"] = "none"
+
         return dbc.Col([
+            dbc.Row(dcc.Dropdown(self.labels, value=curr_dropdown, id=self.ids.dropdown(aio_id), style=style_dropdown)),
+            html.Hr(style=style_dropdown),
             dbc.Row([
                 dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev), md=6),
                 dbc.Col(dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save), md=6)
