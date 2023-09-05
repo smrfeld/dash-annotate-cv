@@ -101,7 +101,7 @@ class AnnotateImageLabelsAIO(html.Div):
         self,
         label_source: LabelSource,
         image_source: ImageSource,
-        annotation_storage: AnnotationStorage,
+        annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
         markdown_props=None,
         dropdown_props=None,
@@ -129,6 +129,7 @@ class AnnotateImageLabelsAIO(html.Div):
         self.curr_image_name: Optional[str] = None
         self.options = options
         self.annotation_writer = AnnotationWriter(annotation_storage)
+        self._curr_image_layout = None
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -175,8 +176,9 @@ class AnnotateImageLabelsAIO(html.Div):
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
             Input(self.ids.next_missing_ann(MATCH), 'n_clicks'),
+            Input(self.ids.dropdown(MATCH), 'value')
             )
-        def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks):
+        def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks, dropdown_value):
             # Figure out which button was pressed
             ctx = dash.callback_context
             button_id = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -189,11 +191,11 @@ class AnnotateImageLabelsAIO(html.Div):
                     # Submit button was pressed
 
                     # Store the annotation
-                    if self.curr_image_name is not None:
+                    if self.curr_image_name is not None and dropdown_value is not None and dropdown_value in self.labels:
                         ann = ImageAnnotations.Annotation(
                             image_name=self.curr_image_name,
                             label=ImageAnnotations.Annotation.Label(
-                                single=self.labels[self.ids.dropdown(MATCH)["value"]],
+                                single=dropdown_value,
                                 timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
                                 author=self.options.author
                                 )
@@ -221,10 +223,14 @@ class AnnotateImageLabelsAIO(html.Div):
                     while self.curr_image_name in self.annotations.image_to_entry:
                         self.curr_image_name, image = self._image_iterator.next()
 
+                elif button_id == self.ids.dropdown(MATCH)["subcomponent"]:
+                    return self._curr_image_layout
+
                 else:
                     raise NotImplementedError(f"Unknown button pressed: {button_id}")
 
-                return self._create_layout_for_image(image)
+                self._curr_image_layout = self._create_layout_for_image(image)
+                return self._curr_image_layout
             except StopIteration:
                 return html.Div("No more images")
 
@@ -234,7 +240,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 html.Div(id=self.ids.image(aio_id))
             ], md=6),
             dbc.Col([
-                dbc.Row(dcc.Dropdown(self.labels, id=self.ids.dropdown(MATCH)['subcomponent'])),
+                dbc.Row(dcc.Dropdown(self.labels, id=self.ids.dropdown(aio_id))),
                 self._create_next_prev_row(aio_id),
                 self._create_next_alt_row(aio_id)
             ], md=6)
