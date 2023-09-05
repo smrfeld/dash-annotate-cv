@@ -24,19 +24,20 @@ Roadmap for future tasks:
     conda activate dash_annotate_cv
     ```
 
-2. Install requirements.
+2. Install.
+
+    ```bash
+    pip install dash_annotate_cv
+    ```
+
+    Or from the repository:
 
     ```bash
     pip install -r requirements.txt
-    ```
-
-3. Install the library.
-
-    ```bash
     pip install -e .
     ```
 
-4. Run the example.
+3. Run the example.
 
     ```bash
     cd examples
