@@ -1,5 +1,5 @@
 from dash import Dash, html
-from dash_annotate import AnnotateImageLabelsAIO, ImageSource, LabelSource, AnnotationStorage, ImageAnnotations
+from dash_annotate_cv import AnnotateImageLabelsAIO, ImageSource, LabelSource, AnnotationStorage, ImageAnnotations
 import dash_bootstrap_components as dbc
 from skimage import data
 import json
