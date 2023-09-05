@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from mashumaro import DataClassDictMixin
 from enum import Enum
-from typing import Optional, List, Iterator, Tuple
+from typing import Optional, List, Tuple
 from PIL import Image
 import os
 

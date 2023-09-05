@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from mashumaro import DataClassDictMixin
 from enum import Enum
 from typing import Optional, List
 

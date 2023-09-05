@@ -3,6 +3,7 @@ from dash_annotate_cv import AnnotateImageLabelsAIO, ImageSource, LabelSource, A
 import dash_bootstrap_components as dbc
 from skimage import data
 import json
+import os
 
 if __name__ == "__main__":
 
@@ -15,12 +16,15 @@ if __name__ == "__main__":
 
     # Set up writing
     storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
-    with open("annotations.json","r") as f:
-        annotations_existing = ImageAnnotations.from_dict(json.load(f))
-
+    if os.path.exists("annotations.json"):
+        with open("annotations.json","r") as f:
+            annotations_existing = ImageAnnotations.from_dict(json.load(f))
+    else:
+        annotations_existing = None
+    
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
     app.layout = dbc.Container([
         html.H1("Annotate Images"),
         AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage, annotations_existing=annotations_existing)
         ])
-    app.run(debug=True)
+    app.run(debug=False)

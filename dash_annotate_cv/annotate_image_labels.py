@@ -1,7 +1,7 @@
-from dash_annotate.annotation_storage import AnnotationStorage, AnnotationWriter
-from dash_annotate.helpers import get_trigger_id
-from dash_annotate.image_source import ImageSource, ImageIterator, IndexAboveError, IndexBelowError
-from dash_annotate.label_source import LabelSource
+from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
+from dash_annotate_cv.helpers import get_trigger_id
+from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError, IndexBelowError
+from dash_annotate_cv.label_source import LabelSource
 
 from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
 import uuid
@@ -394,4 +394,5 @@ class AnnotateImageLabelsAIO(html.Div):
 
     def _create_layout_for_image(self, image: Image.Image):
         fig = px.imshow(image)
+        fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
         return dcc.Graph(id="graph-styled-annotations", figure=fig)
