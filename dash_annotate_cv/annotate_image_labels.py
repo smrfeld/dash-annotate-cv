@@ -18,41 +18,73 @@ import os
 
 @dataclass
 class ImageAnnotations(DataClassDictMixin):
+    """Image annotations result
+    """        
 
     @dataclass
     class Annotation(DataClassDictMixin):
+        """Annotation for a single image
+        """        
 
         @dataclass
         class Label(DataClassDictMixin):
+            """Single label
+            """        
+            # Single label
             single: Optional[str] = None
+
+            # Multiple labels
             multiple: Optional[List[str]] = None
+
+            # Timestamp
             timestamp: Optional[float] = None
+
+            # Author
             author: Optional[str] = None
 
             class Config(BaseConfig):
                 omit_none = True
 
+        # Image name
         image_name: str
+
+        # Label
         label: Label
+
+        # History
         history: Optional[List[Label]] = None
         
         class Config(BaseConfig):
             omit_none = True
 
+    # Image name to annotation
     image_to_entry: Dict[str,Annotation]
 
 class AnnotateImageLabelsAIO(html.Div):
+    """Annotation component for images
+    """
 
     @dataclass
     class Options(DataClassDictMixin):
+        """Options
+        """        
 
         class SelectionMode(Enum):
             SINGLE = "single"
 
+        # Selection mode - how many labels can be selected at once
         selection_mode: SelectionMode = SelectionMode.SINGLE
+
+        # Whether to store timestamps
         store_timestamps: bool = True
+
+        # Whether to store history
         store_history: bool = True
+
+        # Whether to use the basename of the image for the annotation
         use_basename_for_image: bool = False
+
+        # Name of author to store
         author: Optional[str] = None
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
@@ -93,35 +125,27 @@ class AnnotateImageLabelsAIO(html.Div):
             'aio_id': aio_id
         }
 
-    # Make the ids class a public class
     ids = ids
 
-    # Define the arguments of the All-in-One component
     def __init__(
         self,
         label_source: LabelSource,
         image_source: ImageSource,
         annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
-        markdown_props=None,
-        dropdown_props=None,
         aio_id: Optional[str] = None,
         options: Options = Options()
         ):
-        """MarkdownWithColorAIO is an All-in-One component that is composed
-        of a parent `html.Div` with a `dcc.Dropdown` color picker ("`dropdown`") and a
-        `dcc.Markdown` ("`markdown`") component as children.
-        The markdown component's color is determined by the dropdown colorpicker.
-        - `text` - The Markdown component's text (required)
-        - `colors` - The colors displayed in the dropdown
-        - `markdown_props` - A dictionary of properties passed into the dcc.Markdown component. See https://dash.plotly.com/dash-core-components/markdown for the full list.
-        - `dropdown_props` - A dictionary of properties passed into the dcc.Dropdown component. See https://dash.plotly.com/dash-core-components/dropdown for the full list.
-        - `aio_id` - The All-in-One component ID used to generate the markdown and dropdown components's dictionary IDs.
+        """Constructor
 
-        The All-in-One component dictionary IDs are available as
-        - MarkdownWithColorAIO.ids.dropdown(aio_id)
-        - MarkdownWithColorAIO.ids.markdown(aio_id)
-        """
+        Args:
+            label_source (LabelSource): Source of labels
+            image_source (ImageSource): Source of images
+            annotation_storage (AnnotationStorage, optional): Where to store annotations. Defaults to AnnotationStorage().
+            annotations_existing (Optional[ImageAnnotations], optional): Existing annotations to continue from, if any. Defaults to None.
+            aio_id (Optional[str], optional): IDs for components. Defaults to None.
+            options (Options, optional): Options. Defaults to Options().
+        """        
         self.label_source = label_source
         self.labels = label_source.get_labels()
         self.image_source = image_source
@@ -144,34 +168,14 @@ class AnnotateImageLabelsAIO(html.Div):
         else:
             self.aio_id = aio_id
 
-        # Merge user-supplied properties into default properties
-        '''
-        dropdown_props = dropdown_props.copy() if dropdown_props else {}
-        if 'options' not in dropdown_props:
-            dropdown_props['options'] = [{'label': i, 'value': i} for i in colors]
-        dropdown_props['value'] = dropdown_props['options'][0]['value']
-
-        # Merge user-supplied properties into default properties
-        markdown_props = markdown_props.copy() if markdown_props else {} # copy the dict so as to not mutate the user's dict
-        if 'style' not in markdown_props:
-            markdown_props['style'] = {'color': dropdown_props['value']}
-        if 'children' not in markdown_props:
-            markdown_props['children'] = text
-        
-        # Define the component's layout
-        super().__init__([  # Equivalent to `html.Div([...])`
-            dcc.Dropdown(id=self.ids.dropdown(aio_id), **dropdown_props),
-            dcc.Markdown(id=self.ids.markdown(aio_id), **markdown_props)
-        ])
-        '''
-
         super().__init__(self._create_layout(self.aio_id)) # Equivalent to `html.Div([...])`
 
         self._image_iterator = ImageIterator(self.image_source)
         self._define_callbacks()
     
     def _define_callbacks(self):
-        
+        """Define callbacks, called in constructor
+        """        
         @callback(
             Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.buttons(MATCH), 'children'),
@@ -233,21 +237,21 @@ class AnnotateImageLabelsAIO(html.Div):
                     
                     # Get annotation of new image
                     new_dropdown_value = self._get_existing_label_of_curr_image()
-                    self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
+                    self._curr_alert_layout = self._alert_for_existing_label(new_dropdown_value)
 
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
                     self.curr_image_idx, self.curr_image_name, image = self._image_iterator.next()
                     self._curr_image_layout = self._create_layout_for_image(image)
                     new_dropdown_value = self._get_existing_label_of_curr_image()
-                    self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
+                    self._curr_alert_layout = self._alert_for_existing_label(new_dropdown_value)
 
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
                     self.curr_image_idx, self.curr_image_name, image = self._image_iterator.prev()
                     self._curr_image_layout = self._create_layout_for_image(image)
                     new_dropdown_value = self._get_existing_label_of_curr_image()
-                    self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
+                    self._curr_alert_layout = self._alert_for_existing_label(new_dropdown_value)
 
                 elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
                     # Next missing annotation button was pressed
@@ -258,7 +262,7 @@ class AnnotateImageLabelsAIO(html.Div):
                         # Changed image
                         self._curr_image_layout = self._create_layout_for_image(image)
                         new_dropdown_value = self._get_existing_label_of_curr_image()
-                        self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
+                        self._curr_alert_layout = self._alert_for_existing_label(new_dropdown_value)
 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
@@ -270,7 +274,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 if new_dropdown_value is not None and new_dropdown_value in self.labels:
                     self._curr_button_layout = self._create_layout_buttons(
                         aio_id=self.aio_id, 
-                        curr_dropdown=new_dropdown_value,
+                        curr_selected_label=new_dropdown_value,
                         enable_dropdown=True,
                         enable_next_save=True, 
                         enable_prev=True, 
@@ -280,7 +284,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 else:
                     self._curr_button_layout = self._create_layout_buttons(
                         aio_id=self.aio_id, 
-                        curr_dropdown=new_dropdown_value,
+                        curr_selected_label=new_dropdown_value,
                         enable_dropdown=True,
                         enable_next_save=False, 
                         enable_prev=True, 
@@ -293,7 +297,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_alert_layout = dbc.Alert("Finished all images",color="success")
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
-                    curr_dropdown=None,
+                    curr_selected_label=None,
                     enable_dropdown=False,
                     enable_next_save=False, 
                     enable_prev=True, 
@@ -306,7 +310,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
                 self._curr_button_layout = self._create_layout_buttons(
                     aio_id=self.aio_id, 
-                    curr_dropdown=None,
+                    curr_selected_label=None,
                     enable_dropdown=False,
                     enable_next_save=True, 
                     enable_prev=False, 
@@ -317,13 +321,17 @@ class AnnotateImageLabelsAIO(html.Div):
             print("Returning new dropdown value", new_dropdown_value)
             return self._curr_image_layout, self._curr_button_layout
     
-    def _alert_for_existing_dropdown(self, new_dropdown_value: Optional[str]):
-        if new_dropdown_value is not None and new_dropdown_value in self.labels:
-            return dbc.Alert(f"Existing annotation: {new_dropdown_value}", color="primary")
+    def _alert_for_existing_label(self, existing_label: Optional[str]) -> Optional[dbc.Alert]:
+        """Create layout for existing label
+        """        
+        if existing_label is not None and existing_label in self.labels:
+            return dbc.Alert(f"Existing annotation: {existing_label}", color="primary")
         else:
             return None
 
     def _get_existing_label_of_curr_image(self) -> Optional[str]:
+        """Get existing label of current image
+        """        
         if self.curr_image_name in self.annotations.image_to_entry:
             entry = self.annotations.image_to_entry[self.curr_image_name]
             if entry.label.single is not None and entry.label.single in self.labels:
@@ -331,6 +339,8 @@ class AnnotateImageLabelsAIO(html.Div):
         return None
 
     def _create_layout(self, aio_id: str):
+        """Create layout for component
+        """        
         return dbc.Row([
             dbc.Col([
                 html.Div(id=self.ids.image(aio_id))
@@ -342,13 +352,15 @@ class AnnotateImageLabelsAIO(html.Div):
 
     def _create_layout_buttons(self, 
         aio_id: str, 
-        curr_dropdown: Optional[str] = None, 
+        curr_selected_label: Optional[str] = None, 
         enable_dropdown: bool = False, 
         enable_next_save: bool = False, 
         enable_prev: bool=False, 
         enable_skip: bool = False, 
         enable_skip_next_missing: bool = False
         ):
+        """Create layout for buttons
+        """        
         style_prev = {"width": "100%"} 
         style_next_save = {"width": "100%"} 
         style_skip = {"width": "100%"} 
@@ -375,7 +387,7 @@ class AnnotateImageLabelsAIO(html.Div):
             html.H2(title),
             html.Div(self._curr_alert_layout),
             html.Hr(),
-            dbc.Row(dcc.Dropdown(self.labels, value=curr_dropdown, id=self.ids.dropdown(aio_id), style=style_dropdown)),
+            dbc.Row(dcc.Dropdown(self.labels, value=curr_selected_label, id=self.ids.dropdown(aio_id), style=style_dropdown)),
             html.Hr(style=style_dropdown),
             dbc.Row([
                 dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev), md=6),
@@ -393,6 +405,8 @@ class AnnotateImageLabelsAIO(html.Div):
         ])
 
     def _create_layout_for_image(self, image: Image.Image):
+        """Create layout for the image
+        """        
         fig = px.imshow(image)
         fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
         return dcc.Graph(id="graph-styled-annotations", figure=fig)

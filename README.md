@@ -72,3 +72,14 @@ app.run(debug=True)
 ```
 
 The result is shown in the gif above.
+
+### Loading the annotations & format
+
+Loading the annotations is as simple as:
+
+```python
+with open("annotations.json","r") as f:
+    annotations = ImageAnnotations.from_dict(json.load(f))
+```
+
+See the `ImageAnnotations` class for more information on the format.

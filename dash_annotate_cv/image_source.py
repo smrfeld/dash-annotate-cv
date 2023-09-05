@@ -12,16 +12,27 @@ class IndexAboveError(Exception):
 
 @dataclass
 class ImageSource:
-
+    """Specification for where to get images from
+    """
+    
     class Type(Enum):
         DEFAULT = "default"
         FOLDER = "folder"
         LIST_OF_FILES = "list_of_files"
 
+    # Source type
     source_type: Type = Type.DEFAULT
+
+    # Default source: list of image names and images
     images: Optional[List[Tuple[str,Image.Image]]] = None
+
+    # Folder source
     folder_name: Optional[str] = None
+
+    # Folder source: pattern to match
     folder_pattern: str = "*.jpg"
+
+    # List of files source
     list_of_files: Optional[List[str]] = None
 
     def __post_init__(self):
@@ -35,6 +46,9 @@ class ImageSource:
             raise NotImplementedError
 
 class ImageIterator:
+    """Iterator over images
+    """
+    
     def __init__(self, image_source: ImageSource):
         self.image_source = image_source
         self.idx_of_curr_img = -1
