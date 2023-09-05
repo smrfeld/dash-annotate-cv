@@ -4,12 +4,20 @@
          "image_name": "chelsea",
          "label": {
             "single": "cat",
-            "timestamp": 1693889320.406852
+            "timestamp": 1693892841.715404
          },
          "history": [
             {
                "single": "cat",
                "timestamp": 1693889320.406852
+            },
+            {
+               "single": "camera",
+               "timestamp": 1693892837.037912
+            },
+            {
+               "single": "cat",
+               "timestamp": 1693892841.715404
             }
          ]
       },
@@ -17,12 +25,16 @@
          "image_name": "astronaut",
          "label": {
             "single": "astronaut",
-            "timestamp": 1693889323.722681
+            "timestamp": 1693892844.15842
          },
          "history": [
             {
                "single": "astronaut",
                "timestamp": 1693889323.722681
+            },
+            {
+               "single": "astronaut",
+               "timestamp": 1693892844.15842
             }
          ]
       }

@@ -48,7 +48,6 @@ class AnnotateImageLabelsAIO(html.Div):
 
         class SelectionMode(Enum):
             SINGLE = "single"
-            MULTIPLE = "multiple"
 
         selection_mode: SelectionMode = SelectionMode.SINGLE
         store_timestamps: bool = True
@@ -58,11 +57,6 @@ class AnnotateImageLabelsAIO(html.Div):
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
     class ids:
-        alert = lambda aio_id: {
-            'component': 'AnnotateImageLabelsAIO',
-            'subcomponent': 'alert',
-            'aio_id': aio_id
-        }
         buttons = lambda aio_id: {
             'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'buttons',
@@ -135,7 +129,7 @@ class AnnotateImageLabelsAIO(html.Div):
         self.curr_image_name: Optional[str] = None
         self.options = options
         self.annotation_writer = AnnotationWriter(annotation_storage)
-        self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout = None, None, None
+        self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout, self.curr_image_idx = None, None, None, None
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -181,7 +175,6 @@ class AnnotateImageLabelsAIO(html.Div):
         @callback(
             Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.buttons(MATCH), 'children'),
-            Output(self.ids.alert(MATCH), 'children'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -235,7 +228,7 @@ class AnnotateImageLabelsAIO(html.Div):
                     self.annotation_writer.write(self.annotations)
 
                     # Load the next image
-                    self.curr_image_name, image = self._image_iterator.next()
+                    self.curr_image_idx, self.curr_image_name, image = self._image_iterator.next()
                     self._curr_image_layout = self._create_layout_for_image(image)
                     
                     # Get annotation of new image
@@ -244,14 +237,14 @@ class AnnotateImageLabelsAIO(html.Div):
 
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
-                    self.curr_image_name, image = self._image_iterator.next()
+                    self.curr_image_idx, self.curr_image_name, image = self._image_iterator.next()
                     self._curr_image_layout = self._create_layout_for_image(image)
                     new_dropdown_value = self._get_existing_label_of_curr_image()
                     self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
 
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
-                    self.curr_image_name, image = self._image_iterator.prev()
+                    self.curr_image_idx, self.curr_image_name, image = self._image_iterator.prev()
                     self._curr_image_layout = self._create_layout_for_image(image)
                     new_dropdown_value = self._get_existing_label_of_curr_image()
                     self._curr_alert_layout = self._alert_for_existing_dropdown(new_dropdown_value)
@@ -260,7 +253,7 @@ class AnnotateImageLabelsAIO(html.Div):
                     # Next missing annotation button was pressed
                     image = None
                     while self.curr_image_name in self.annotations.image_to_entry:
-                        self.curr_image_name, image = self._image_iterator.next()
+                        self.curr_image_idx, self.curr_image_name, image = self._image_iterator.next()
                     if image is not None:
                         # Changed image
                         self._curr_image_layout = self._create_layout_for_image(image)
@@ -322,7 +315,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
 
             print("Returning new dropdown value", new_dropdown_value)
-            return self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout
+            return self._curr_image_layout, self._curr_button_layout
     
     def _alert_for_existing_dropdown(self, new_dropdown_value: Optional[str]):
         if new_dropdown_value is not None and new_dropdown_value in self.labels:
@@ -343,13 +336,19 @@ class AnnotateImageLabelsAIO(html.Div):
                 html.Div(id=self.ids.image(aio_id))
             ], md=6),
             dbc.Col([
-                html.Div(id=self.ids.alert(aio_id)),
-                html.Hr(),
-                html.Div([self._create_layout_buttons(aio_id)], id=self.ids.buttons(aio_id))
-            ], md=6)
+                self._create_layout_buttons(aio_id)
+            ], md=6, id=self.ids.buttons(aio_id))
         ])
 
-    def _create_layout_buttons(self, aio_id: str, curr_dropdown: Optional[str] = None, enable_dropdown: bool = False, enable_next_save: bool = False, enable_prev: bool=False, enable_skip: bool = False, enable_skip_next_missing: bool = False):
+    def _create_layout_buttons(self, 
+        aio_id: str, 
+        curr_dropdown: Optional[str] = None, 
+        enable_dropdown: bool = False, 
+        enable_next_save: bool = False, 
+        enable_prev: bool=False, 
+        enable_skip: bool = False, 
+        enable_skip_next_missing: bool = False
+        ):
         style_prev = {"width": "100%"} 
         style_next_save = {"width": "100%"} 
         style_skip = {"width": "100%"} 
@@ -366,7 +365,16 @@ class AnnotateImageLabelsAIO(html.Div):
         if not enable_dropdown:
             style_dropdown["display"] = "none"
 
+        if hasattr(self,"_image_iterator") and self._image_iterator is not None and self.curr_image_idx is not None:
+            no_images = self._image_iterator.no_images
+            title = f"Image {self.curr_image_idx+1}/{no_images}"
+        else:
+            title = "Image"
+
         return dbc.Col([
+            html.H2(title),
+            html.Div(self._curr_alert_layout),
+            html.Hr(),
             dbc.Row(dcc.Dropdown(self.labels, value=curr_dropdown, id=self.ids.dropdown(aio_id), style=style_dropdown)),
             html.Hr(style=style_dropdown),
             dbc.Row([
