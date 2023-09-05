@@ -15,6 +15,34 @@ Roadmap for future tasks:
 
 **Note**: this library is not meant for production usage. It is meant to be used for quick prototyping and testing of annotation tasks.
 
+## Getting started
+
+1. (Recommended) Create a new conda environment.
+
+    ```bash
+    conda create -n dash_annotate_cv python=3.11
+    conda activate dash_annotate_cv
+    ```
+
+2. Install requirements.
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. Install the library.
+
+    ```bash
+    pip install -e .
+    ```
+
+4. Run the example.
+
+    ```bash
+    cd examples
+    python example.py
+    ```
+
 ## Example
 
 You can also check out the [examples](examples).
