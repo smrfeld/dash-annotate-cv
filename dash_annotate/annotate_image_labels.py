@@ -10,6 +10,7 @@ import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
+from mashumaro.config import BaseConfig
 from enum import Enum
 import dash
 import json
@@ -29,10 +30,16 @@ class ImageAnnotations(DataClassDictMixin):
             timestamp: Optional[float] = None
             author: Optional[str] = None
 
+            class Config(BaseConfig):
+                omit_none = True
+
         image_name: str
         label: Label
         history: Optional[List[Label]] = None
-    
+        
+        class Config(BaseConfig):
+            omit_none = True
+
     image_to_entry: Dict[str,Annotation]
 
 class AnnotateImageLabelsAIO(html.Div):

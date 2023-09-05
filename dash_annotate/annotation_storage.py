@@ -49,7 +49,8 @@ class AnnotationWriter:
 
                 # Write to file
                 dir_name = os.path.dirname(self.storage.json_file)
-                assert os.path.exists(dir_name), f"Directory of json_file does not exist: {dir_name}"
+                if dir_name != "":
+                    assert os.path.exists(dir_name), f"Directory of json_file does not exist: {dir_name}"
                 with open(self.storage.json_file,"w") as f:
                     json.dump(annotations.to_dict(), f, indent=3)
 
