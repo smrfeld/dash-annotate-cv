@@ -201,16 +201,35 @@ class AnnotateImageLabelsAIO(html.Div):
 
                     # Store the annotation
                     if self.curr_image_name is not None and dropdown_value is not None and dropdown_value in self.labels:
-                        ann = ImageAnnotations.Annotation(
-                            image_name=self.curr_image_name,
-                            label=ImageAnnotations.Annotation.Label(
-                                single=dropdown_value,
-                                timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
-                                author=self.options.author
-                                )
-                            )
+
                         image_name = os.path.basename(self.curr_image_name) if self.options.use_basename_for_image else self.curr_image_name
-                        self.annotations.image_to_entry[image_name] = ann
+
+                        # Label
+                        label = ImageAnnotations.Annotation.Label(
+                            single=dropdown_value,
+                            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+                            author=self.options.author
+                            )
+
+                        did_update = False
+                        if image_name in self.annotations.image_to_entry:
+                            ann = self.annotations.image_to_entry[image_name]
+                            if ann.label != label:
+                                ann.label = label
+                                did_update = True
+                        else:
+                            ann = ImageAnnotations.Annotation(
+                                image_name=self.curr_image_name,
+                                label=label
+                                )
+                            self.annotations.image_to_entry[image_name] = ann
+                            did_update = True
+
+                        # Also add history
+                        if did_update and self.options.store_history:
+                            if ann.history is None:
+                                ann.history = []
+                            ann.history.append(label)
 
                     # Write
                     self.annotation_writer.write(self.annotations)
