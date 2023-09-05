@@ -1,6 +1,6 @@
 # Dash Annotate CV - A dash library for computer vision annotation tasks
 
-`dash_annotate_cv` is a Python Dash library for computer vision annotation tasks.
+`dash_annotate_cv` is a Python Dash library for computer vision annotation tasks. It exposes reusable annotation components in a library format for `dash`.
 
 ![](readme_gif.gif)
 
@@ -83,3 +83,8 @@ with open("annotations.json","r") as f:
 ```
 
 See the `ImageAnnotations` class for more information on the format.
+
+## Dev
+
+[All-in-one components for Dash](https://dash.plotly.com/all-in-one-components)
+[Image annotation in Dash](https://dash.plotly.com/annotations)
