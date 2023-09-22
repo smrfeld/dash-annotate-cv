@@ -2,6 +2,7 @@ from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWri
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
+from dash_annotate_cv.image_annotations import ImageAnnotations
 
 from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
 import uuid
@@ -11,54 +12,10 @@ import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
-from mashumaro.config import BaseConfig
 from enum import Enum
 import datetime
 import os
 
-@dataclass
-class ImageAnnotations(DataClassDictMixin):
-    """Image annotations result
-    """        
-
-    @dataclass
-    class Annotation(DataClassDictMixin):
-        """Annotation for a single image
-        """        
-
-        @dataclass
-        class Label(DataClassDictMixin):
-            """Single label
-            """        
-            # Single label
-            single: Optional[str] = None
-
-            # Multiple labels
-            multiple: Optional[List[str]] = None
-
-            # Timestamp
-            timestamp: Optional[float] = None
-
-            # Author
-            author: Optional[str] = None
-
-            class Config(BaseConfig):
-                omit_none = True
-
-        # Image name
-        image_name: str
-
-        # Label
-        label: Label
-
-        # History
-        history: Optional[List[Label]] = None
-        
-        class Config(BaseConfig):
-            omit_none = True
-
-    # Image name to annotation
-    image_to_entry: Dict[str,Annotation]
 
 class AnnotateImageLabelsAIO(html.Div):
     """Annotation component for images
@@ -384,24 +341,37 @@ class AnnotateImageLabelsAIO(html.Div):
         else:
             title = "Image"
 
+        # Create components
+        dropdown = dcc.Dropdown(
+            self.labels, 
+            value=curr_selected_label, 
+            id=self.ids.dropdown(aio_id), 
+            style=style_dropdown,
+            multi=self.options.selection_mode == AnnotateImageLabelsAIO.Options.SelectionMode.MULTIPLE
+            )
+        prev_button = dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev)
+        next_button = dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save)
+        skip_button = dbc.Button("Skip", color="dark", id=self.ids.next_skip(aio_id), style=style_skip)
+        skip_to_next_button = dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style=style_next_missing_annotation)
+
         return dbc.Col([
             html.H2(title),
             html.Div(self._curr_alert_layout),
             html.Hr(),
-            dbc.Row(dcc.Dropdown(self.labels, value=curr_selected_label, id=self.ids.dropdown(aio_id), style=style_dropdown)),
+            dbc.Row(dropdown),
             html.Hr(style=style_dropdown),
             dbc.Row([
-                dbc.Col(dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev), md=6),
-                dbc.Col(dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save), md=6)
+                dbc.Col(prev_button, md=6),
+                dbc.Col(next_button, md=6)
                 ]),
             html.Hr(),
             dbc.Row([
                 dbc.Col([],md=6),
-                dbc.Col(dbc.Button("Skip", color="dark", id=self.ids.next_skip(aio_id), style=style_skip), md=6),
+                dbc.Col(skip_button, md=6),
                 ]),
             dbc.Row([
                 dbc.Col([],md=6),
-                dbc.Col(dbc.Button("Skip to next missing annotation", color="warning", id=self.ids.next_missing_ann(aio_id), style=style_next_missing_annotation), md=6),
+                dbc.Col(skip_to_next_button, md=6),
             ])
         ])
 
