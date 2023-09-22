@@ -71,6 +71,7 @@ class AnnotateImageLabelsAIO(html.Div):
 
         class SelectionMode(Enum):
             SINGLE = "single"
+            MULTIPLE = "multiple"
 
         # Selection mode - how many labels can be selected at once
         selection_mode: SelectionMode = SelectionMode.SINGLE

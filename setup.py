@@ -19,7 +19,13 @@ setup(
     ],
     install_requires=[
         "dash",
-        # Add other dependencies your library requires
+        "scikit_image",
+        "plotly",
+        "dash_bootstrap_components",
+        "dataclasses",
+        "mashumaro",
+        "Pillow",
+        "scikit-image"
     ],
     python_requires=">=3.6",
 )
