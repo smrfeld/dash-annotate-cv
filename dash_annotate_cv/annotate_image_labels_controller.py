@@ -1,6 +1,6 @@
 from dash_annotate_cv.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
-from dash_annotate_cv.image_source import ImageSource, ImageIterator
+from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError
 from dash_annotate_cv.label_source import LabelSource
 
 from dataclasses import dataclass
@@ -38,6 +38,12 @@ class ImageAnnotationOptions(DataClassDictMixin):
     # Name of author to store
     author: Optional[str] = None
 
+class NoCurrLabelError(Exception):
+    pass
+
+class InvalidLabelError(Exception):
+    pass
+
 class ImageAnnotationController:
 
     def __init__(
@@ -55,7 +61,14 @@ class ImageAnnotationController:
         self._labels = label_source.get_labels()
         self.annotations = annotations_existing or ImageAnnotations(image_to_entry={})
         self._image_iterator = ImageIterator(self.image_source)
-        self._curr_image_label: Optional[ImageLabel] = None
+
+        # Load the first image
+        try:
+            image_idx, image_name, image = self._image_iterator.next()
+            label_value = self._get_existing_label(image_name)
+            self._curr: Optional[ImageLabel] = ImageLabel(image_idx, image_name, image, label_value)
+        except IndexAboveError:
+            self._curr: Optional[ImageLabel] = None
     
     @property
     def no_images(self) -> int:
@@ -66,76 +79,76 @@ class ImageAnnotationController:
         return list(self._labels)
 
     @property
-    def curr_image_label(self) -> Optional[ImageLabel]:
-        return self._curr_image_label
+    def curr(self) -> Optional[ImageLabel]:
+        return self._curr
 
-    def store_label(self, label_value: Optional[str]):
+    def store_label(self, label_value: str):
+        if self._curr is None:
+            raise NoCurrLabelError("No current label")
 
-        if self._curr_image_label is not None and label_value is not None and label_value in self._labels:
-                
-            # Store the annotation
-            image_name = os.path.basename(self._curr_image_label.image_name) if self.options.use_basename_for_image else self._curr_image_label.image_name
+        if not label_value in self._labels:
+            raise InvalidLabelError("Label value not in label source")
 
-            # Label
-            label = ImageAnnotations.Annotation.Label(
-                single=label_value,
-                timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
-                author=self.options.author
-                )
+        # Store the annotation
+        image_name = os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
 
-            did_update = False
-            if image_name in self.annotations.image_to_entry:
-                ann = self.annotations.image_to_entry[image_name]
-                if ann.label != label:
-                    ann.label = label
-                    did_update = True
-            else:
-                ann = ImageAnnotations.Annotation(
-                    image_name=image_name,
-                    label=label
-                    )
-                self.annotations.image_to_entry[image_name] = ann
+        # Label
+        label = ImageAnnotations.Annotation.Label(
+            single=label_value,
+            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+            author=self.options.author
+            )
+
+        did_update = False
+        if image_name in self.annotations.image_to_entry:
+            ann = self.annotations.image_to_entry[image_name]
+            if ann.label != label:
+                ann.label = label
                 did_update = True
+        else:
+            ann = ImageAnnotations.Annotation(
+                image_name=image_name,
+                label=label
+                )
+            self.annotations.image_to_entry[image_name] = ann
+            did_update = True
 
-            # Also add history
-            if did_update and self.options.store_history:
-                if ann.history is None:
-                    ann.history = []
-                ann.history.append(label)
+        # Also add history
+        if did_update and self.options.store_history:
+            if ann.history is None:
+                ann.history = []
+            ann.history.append(label)
 
-            # Write
-            self.annotation_writer.write(self.annotations)
+        # Write
+        self.annotation_writer.write(self.annotations)
 
         # Load the next image
         image_idx, image_name, image = self._image_iterator.next()
-        label_value = self._get_existing_label_of_curr_image()
-        self._curr_image_label = ImageLabel(image_idx, image_name, image, label_value)
+        new_label_value = self._get_existing_label(image_name)
+        self._curr = ImageLabel(image_idx, image_name, image, new_label_value)
 
     def skip(self):
         image_idx, image_name, image = self._image_iterator.next()
-        label_value = self._get_existing_label_of_curr_image()
-        self._curr_image_label = ImageLabel(image_idx, image_name, image, label_value)
+        label_value = self._get_existing_label(image_name)
+        self._curr = ImageLabel(image_idx, image_name, image, label_value)
 
     def previous(self):
         image_idx, image_name, image = self._image_iterator.prev()
-        label_value = self._get_existing_label_of_curr_image()
-        self._curr_image_label = ImageLabel(image_idx, image_name, image, label_value)
+        label_value = self._get_existing_label(image_name)
+        self._curr = ImageLabel(image_idx, image_name, image, label_value)
 
     def skip_to_next_missing_ann(self) -> Optional[ImageLabel]:
         image, image_idx = None, None
-        image_name = self._curr_image_label.image_name if self._curr_image_label is not None else None
+        image_name = self._curr.image_name if self._curr is not None else None
         while image_name in self.annotations.image_to_entry:
             image_idx, image_name, image = self._image_iterator.next()
         if image is not None and image_idx is not None and image_name is not None:
             # Changed image
-            label_value = self._get_existing_label_of_curr_image()
+            label_value = self._get_existing_label(image_name)
             return ImageLabel(image_idx, image_name, image, label_value)
         return None
 
-    def _get_existing_label_of_curr_image(self) -> Optional[str]:
-        if self._curr_image_label is None:
-            return None
-        image_name = self._curr_image_label.image_name
+    def _get_existing_label(self, image_name: str) -> Optional[str]:
         if image_name in self.annotations.image_to_entry:
             entry = self.annotations.image_to_entry[image_name]
             if entry.label.single is not None and entry.label.single in self._labels:

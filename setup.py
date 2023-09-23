@@ -24,6 +24,7 @@ setup(
         "dash_bootstrap_components",
         "dataclasses",
         "mashumaro",
+        "pandas",
         "Pillow",
         "scikit-image"
     ],

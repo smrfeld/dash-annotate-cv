@@ -4,5 +4,6 @@ plotly>=5.11.0
 dash_bootstrap_components>=1.4.2
 dataclasses>=0.8
 mashumaro>=3.9.1
+pandas
 Pillow>=10.0.0
 scikit-image

@@ -109,8 +109,8 @@ class AnnotateImageLabelsAIO(html.Div):
     
     def _refresh_layout(self):
         # Update layout
-        image = self.controller.curr_image_label.image if self.controller.curr_image_label is not None else None
-        label = self.controller.curr_image_label.label_value if self.controller.curr_image_label is not None else None
+        image = self.controller.curr.image if self.controller.curr is not None else None
+        label = self.controller.curr.label_value if self.controller.curr is not None else None
         self._curr_image_layout = self._create_layout_for_image(image)                    
         self._curr_alert_layout = self._alert_for_existing_label(label)
 
@@ -131,7 +131,7 @@ class AnnotateImageLabelsAIO(html.Div):
             trigger_id = get_trigger_id()
             print(f"Trigger: '{trigger_id}'")
 
-            is_initial = trigger_id == "" and self.controller.curr_image_label is None
+            is_initial = trigger_id == "" and self.controller.curr is None
 
             try:
                 if trigger_id == self.ids.next_submit(MATCH)["subcomponent"] or is_initial:
@@ -258,9 +258,9 @@ class AnnotateImageLabelsAIO(html.Div):
         if not enable_dropdown:
             style_dropdown["display"] = "none"
 
-        if self.controller.curr_image_label is not None:
+        if self.controller.curr is not None:
             no_images = self.controller.no_images
-            title = f"Image {self.controller.curr_image_label.image_idx+1}/{no_images}"
+            title = f"Image {self.controller.curr.image_idx+1}/{no_images}"
         else:
             title = "Image"
 

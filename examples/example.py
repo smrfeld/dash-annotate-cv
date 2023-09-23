@@ -8,7 +8,7 @@ import os
 if __name__ == "__main__":
 
     # Load some images
-    images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ]
+    images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
 
     # Set up the image and label sources
     image_source = ImageSource(images=images)
