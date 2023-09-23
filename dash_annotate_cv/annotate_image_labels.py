@@ -1,21 +1,17 @@
 from dash_annotate_cv.annotate_image_labels_controller import ImageAnnotationController, ImageAnnotationOptions
-from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate_cv.helpers import get_trigger_id
-from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError, IndexBelowError
+from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
 from dash_annotate_cv.image_annotations import ImageAnnotations
+from dash_annotate_cv.annotation_storage import AnnotationStorage
 
-from dash import Dash, Output, Input, State, html, dcc, callback, MATCH
+from dash import Output, Input, html, dcc, callback, MATCH
 import uuid
-from typing import List, Optional, Dict
+from typing import Optional
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
-from mashumaro import DataClassDictMixin
-from enum import Enum
-import datetime
-import os
 
 
 class AnnotateImageLabelsAIO(html.Div):
@@ -120,7 +116,6 @@ class AnnotateImageLabelsAIO(html.Div):
         @callback(
             Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.buttons(MATCH), 'children'),
-            Output(self.ids.dropdown(MATCH), 'value'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -133,6 +128,7 @@ class AnnotateImageLabelsAIO(html.Div):
             print(f"Trigger: '{trigger_id}'")
 
             is_initial = trigger_id == ""
+            enable_btns = AnnotateImageLabelsAIO.EnableButtons()
 
             try:
                 if is_initial:
@@ -169,45 +165,34 @@ class AnnotateImageLabelsAIO(html.Div):
                 else:
                     print(f"Unknown button pressed: {trigger_id}")
 
-                enable_next_save = new_dropdown_value is not None and new_dropdown_value in self.controller.labels
-                self._curr_button_layout = self._create_layout_buttons(
-                    aio_id=self.aio_id, 
-                    curr_selected_label=new_dropdown_value,
-                    enable_dropdown=True,
-                    enable_next_save=enable_next_save, 
-                    enable_prev=True, 
-                    enable_skip=True, 
-                    enable_skip_next_missing=True
-                    )
+                enable_btns.next_btn = new_dropdown_value is not None and new_dropdown_value in self.controller.labels
+                enable_btns.prev_btn = True
+                enable_btns.skip_btn = True
+                enable_btns.skip_to_next_btn = True
 
             except IndexAboveError:
                 self._curr_image_layout = html.Div()
                 self._curr_alert_layout = dbc.Alert("Finished all images",color="success")
-                self._curr_button_layout = self._create_layout_buttons(
-                    aio_id=self.aio_id, 
-                    curr_selected_label=None,
-                    enable_dropdown=False,
-                    enable_next_save=False, 
-                    enable_prev=True, 
-                    enable_skip=False, 
-                    enable_skip_next_missing=False
-                    )
+                new_dropdown_value = None
+                enable_btns.prev_btn = True
 
             except IndexBelowError:
                 self._curr_image_layout = html.Div()
                 self._curr_alert_layout = dbc.Alert("Start of images",color="danger")
-                self._curr_button_layout = self._create_layout_buttons(
-                    aio_id=self.aio_id, 
-                    curr_selected_label=None,
-                    enable_dropdown=False,
-                    enable_next_save=True, 
-                    enable_prev=False, 
-                    enable_skip=True, 
-                    enable_skip_next_missing=True
-                    )
+                new_dropdown_value = None
+                enable_btns.next_btn = True
+                enable_btns.skip_btn = True
+                enable_btns.skip_to_next_btn = True
+
+            # Update layout
+            self._curr_button_layout = self._create_layout_buttons(
+                aio_id=self.aio_id, 
+                curr_selected_label=new_dropdown_value,
+                enable=enable_btns
+                )
 
             print("Returning new dropdown value", new_dropdown_value)
-            return self._curr_image_layout, self._curr_button_layout, new_dropdown_value
+            return self._curr_image_layout, self._curr_button_layout
     
     def _alert_for_existing_label(self, existing_label: Optional[str]) -> Optional[dbc.Alert]:
         """Create layout for existing label
@@ -229,14 +214,20 @@ class AnnotateImageLabelsAIO(html.Div):
             ], md=6, id=self.ids.buttons(aio_id))
         ])
 
+    @dataclass
+    class EnableButtons:
+        """Layout for buttons
+        """        
+        dropdown: bool = False
+        prev_btn: bool = False
+        next_btn: bool = False
+        skip_btn: bool = False
+        skip_to_next_btn: bool = False
+
     def _create_layout_buttons(self, 
         aio_id: str, 
         curr_selected_label: Optional[str] = None, 
-        enable_dropdown: bool = False, 
-        enable_next_save: bool = False, 
-        enable_prev: bool=False, 
-        enable_skip: bool = False, 
-        enable_skip_next_missing: bool = False
+        enable: EnableButtons = EnableButtons()
         ):
         """Create layout for buttons
         """        
@@ -245,15 +236,15 @@ class AnnotateImageLabelsAIO(html.Div):
         style_skip = {"width": "100%"} 
         style_next_missing_annotation = {"width": "100%"} 
         style_dropdown = {}
-        if not enable_prev:
+        if not enable.prev_btn:
             style_prev["display"] = "none"
-        if not enable_next_save:
+        if not enable.next_btn:
             style_next_save["display"] = "none"
-        if not enable_skip:
+        if not enable.skip_btn:
             style_skip["display"] = "none"
-        if not enable_skip_next_missing:
+        if not enable.skip_to_next_btn:
             style_next_missing_annotation["display"] = "none"
-        if not enable_dropdown:
+        if not enable.dropdown:
             style_dropdown["display"] = "none"
 
         if self.controller.curr is not None:
