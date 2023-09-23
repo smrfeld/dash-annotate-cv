@@ -4,18 +4,22 @@ from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAbove
 from dash_annotate_cv.label_source import LabelSource
 
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Union
 from PIL import Image
 from enum import Enum
 from mashumaro import DataClassDictMixin
 import os
 import datetime
-from collections import namedtuple
-
-ImageLabel = namedtuple("ImageLabel", ["image_idx", "image_name", "image", "label_value"])
 
 @dataclass
-class ImageAnnotationOptions(DataClassDictMixin):
+class ImageLabel:
+    image_idx: int
+    image_name: str
+    image: Image.Image
+    label_value: Optional[Union[str,List[str]]]
+
+@dataclass
+class AnnotateImageLabelsOptions(DataClassDictMixin):
     """Options
     """        
 
@@ -48,7 +52,7 @@ class InvalidLabelError(Exception):
     """
     pass
 
-class ImageAnnotationController:
+class AnnotateImageLabelsController:
     """Image annotation controller
     """
 
@@ -58,7 +62,7 @@ class ImageAnnotationController:
         image_source: ImageSource,
         annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
-        options: ImageAnnotationOptions = ImageAnnotationOptions()
+        options: AnnotateImageLabelsOptions = AnnotateImageLabelsOptions()
         ):
         """Constructor
 
@@ -112,7 +116,49 @@ class ImageAnnotationController:
         """        
         return self._curr
 
+    def store_label_multiple(self, label_values: List[str]):
+        """Store multiple labels for image
+
+        Args:
+            label_values (List[str]): Label values
+
+        Raises:
+            NoCurrLabelError: If no current label
+            InvalidLabelError: If provided label is not in label source
+        """
+        for label_value in label_values:
+            if not label_value in self._labels:
+                raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (label_value, str(self._labels)))
+
+        label = ImageAnnotations.Annotation.Label(
+            multiple=label_values,
+            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+            author=self.options.author
+            )
+        self._store_label(label)
+        
     def store_label(self, label_value: str):
+        """Store label for image
+
+        Args:
+            label_value (str): Label value
+
+        Raises:
+            NoCurrLabelError: If no current label
+            InvalidLabelError: If provided label is not in label source
+        """
+        if not label_value in self._labels:
+            raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (label_value, str(self._labels)))
+
+        # Label
+        label = ImageAnnotations.Annotation.Label(
+            single=label_value,
+            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+            author=self.options.author
+            )
+        self._store_label(label)
+
+    def _store_label(self, label: ImageAnnotations.Annotation.Label):
         """Store label for image
 
         Args:
@@ -125,18 +171,8 @@ class ImageAnnotationController:
         if self._curr is None:
             raise NoCurrLabelError("No current label")
 
-        if not label_value in self._labels:
-            raise InvalidLabelError("Label value not in label source")
-
         # Store the annotation
         image_name = os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
-
-        # Label
-        label = ImageAnnotations.Annotation.Label(
-            single=label_value,
-            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
-            author=self.options.author
-            )
 
         did_update = False
         if image_name in self.annotations.image_to_entry:
@@ -194,17 +230,34 @@ class ImageAnnotationController:
         else:
             self._curr = None
 
-    def _get_existing_label(self, image_name: str) -> Optional[str]:
+    def _get_existing_label(self, image_name: str) -> Optional[Union[str,List[str]]]:
         """Get existing label for image
 
         Args:
             image_name (str): Name of image
 
         Returns:
-            Optional[str]: Label value, if any
-        """        
+            Optional[Union[str,List[str]]]: Label value, if any
+        """      
+        label = None  
+
+        # Retrieve the label if it exists
         if image_name in self.annotations.image_to_entry:
             entry = self.annotations.image_to_entry[image_name]
-            if entry.label.single is not None and entry.label.single in self._labels:
-                return entry.label.single
-        return None
+            if self.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE:
+                label = entry.label.single
+            elif self.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE:
+                label = entry.label.multiple
+            else:
+                raise NotImplementedError("Unknown selection mode: %s" % str(self.options.selection_mode))
+        
+        # Ensure that the selected label is of the correct type
+        if label is not None:
+            if self.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE:
+                if type(label) == list:
+                    label = label[0] if len(label) > 0 else None
+            elif self.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE:
+                if type(label) == str:
+                    label = [label]
+        
+        return label

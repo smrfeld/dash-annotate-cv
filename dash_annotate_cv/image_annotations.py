@@ -15,7 +15,7 @@ class ImageAnnotations(DataClassDictMixin):
 
         @dataclass
         class Label(DataClassDictMixin):
-            """Single label
+            """Label
             """        
             # Single label
             single: Optional[str] = None
@@ -28,6 +28,12 @@ class ImageAnnotations(DataClassDictMixin):
 
             # Author
             author: Optional[str] = None
+
+            # Equality
+            def __eq__(self, other):
+                if not isinstance(other, ImageAnnotations.Annotation.Label):
+                    return False
+                return self.single == other.single and self.multiple == other.multiple and self.author == other.author
 
             class Config(BaseConfig):
                 omit_none = True

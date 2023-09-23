@@ -1,4 +1,4 @@
-from dash_annotate_cv.annotate_image_labels_controller import ImageAnnotationController, ImageAnnotationOptions
+from dash_annotate_cv.annotate_image_labels_controller import AnnotateImageLabelsController, AnnotateImageLabelsOptions
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -7,7 +7,7 @@ from dash_annotate_cv.annotation_storage import AnnotationStorage
 
 from dash import Output, Input, html, dcc, callback, MATCH
 import uuid
-from typing import Optional
+from typing import Optional, Union, List
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
@@ -65,7 +65,7 @@ class AnnotateImageLabelsAIO(html.Div):
         annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
         aio_id: Optional[str] = None,
-        options: ImageAnnotationOptions = ImageAnnotationOptions()
+        options: AnnotateImageLabelsOptions = AnnotateImageLabelsOptions()
         ):
         """Constructor
 
@@ -77,7 +77,7 @@ class AnnotateImageLabelsAIO(html.Div):
             aio_id (Optional[str], optional): IDs for components. Defaults to None.
             options (Options, optional): Options. Defaults to Options().
         """
-        self.controller = ImageAnnotationController(
+        self.controller = AnnotateImageLabelsController(
             label_source=label_source,
             image_source=image_source,
             annotation_storage=annotation_storage,
@@ -102,8 +102,7 @@ class AnnotateImageLabelsAIO(html.Div):
         super().__init__(self._create_layout(self.aio_id)) # Equivalent to `html.Div([...])`
         self._define_callbacks()
     
-    def _refresh_layout(self) -> Optional[str]:
-        # Update layout
+    def _refresh_layout(self) -> Optional[Union[str,List[str]]]:
         image = self.controller.curr.image if self.controller.curr is not None else None
         label = self.controller.curr.label_value if self.controller.curr is not None else None
         self._curr_image_layout = self._create_layout_for_image(image)                    
@@ -138,7 +137,14 @@ class AnnotateImageLabelsAIO(html.Div):
                 elif trigger_id == self.ids.next_submit(MATCH)["subcomponent"]:
                     # Submit button was pressed
                     if dropdown_value is not None:
-                        self.controller.store_label(dropdown_value)
+                        if type(dropdown_value) == str:
+                            assert self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE, f"Single selection mode expects a str label but got: {dropdown_value}"
+                            self.controller.store_label(dropdown_value)
+                        elif type(dropdown_value) == list:
+                            assert self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE, f"Multiple selection mode expects a list of str labels but got: {dropdown_value}"
+                            self.controller.store_label_multiple(dropdown_value)
+                        else:
+                            raise NotImplementedError(f"Unknown type of dropdown value: {type(dropdown_value)} ({dropdown_value})")
                     else:
                         self.controller.skip()
                     new_dropdown_value = self._refresh_layout()
@@ -160,21 +166,29 @@ class AnnotateImageLabelsAIO(html.Div):
                 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
+                    print(f"Dropdown changed: {new_dropdown_value}")
                     pass
 
                 else:
                     print(f"Unknown button pressed: {trigger_id}")
 
-                enable_btns.next_btn = new_dropdown_value is not None and new_dropdown_value in self.controller.labels
+                # Enable/disable buttons
+                if new_dropdown_value is not None:
+                    if type(new_dropdown_value) == str and new_dropdown_value in self.controller.labels:
+                        enable_btns.next_btn = True
+                    elif type(new_dropdown_value) == list and all([l in self.controller.labels for l in new_dropdown_value]):
+                        enable_btns.next_btn = True
                 enable_btns.prev_btn = True
                 enable_btns.skip_btn = True
                 enable_btns.skip_to_next_btn = True
+                enable_btns.dropdown = True
 
             except IndexAboveError:
                 self._curr_image_layout = html.Div()
                 self._curr_alert_layout = dbc.Alert("Finished all images",color="success")
                 new_dropdown_value = None
                 enable_btns.prev_btn = True
+                enable_btns.dropdown = False
 
             except IndexBelowError:
                 self._curr_image_layout = html.Div()
@@ -183,6 +197,7 @@ class AnnotateImageLabelsAIO(html.Div):
                 enable_btns.next_btn = True
                 enable_btns.skip_btn = True
                 enable_btns.skip_to_next_btn = True
+                enable_btns.dropdown = False
 
             # Update layout
             self._curr_button_layout = self._create_layout_buttons(
@@ -191,14 +206,18 @@ class AnnotateImageLabelsAIO(html.Div):
                 enable=enable_btns
                 )
 
-            print("Returning new dropdown value", new_dropdown_value)
             return self._curr_image_layout, self._curr_button_layout
     
-    def _alert_for_existing_label(self, existing_label: Optional[str]) -> Optional[dbc.Alert]:
+    def _alert_for_existing_label(self, existing_label: Optional[Union[str,List[str]]]) -> Optional[dbc.Alert]:
         """Create layout for existing label
         """
-        if existing_label is not None and existing_label in self.controller.labels:
-            return dbc.Alert(f"Existing annotation: {existing_label}", color="primary")
+        if existing_label is not None:
+            if type(existing_label) == str and existing_label in self.controller.labels:
+                return dbc.Alert(f"Existing annotation: {existing_label}", color="primary")
+            elif type(existing_label) == list and all([l in self.controller.labels for l in existing_label]):
+                return dbc.Alert(f"Existing annotation: {existing_label}", color="primary")
+            else:
+                return dbc.Alert(f"Existing unknown annotation: {existing_label}", color="danger")
         else:
             return None
 
@@ -226,11 +245,18 @@ class AnnotateImageLabelsAIO(html.Div):
 
     def _create_layout_buttons(self, 
         aio_id: str, 
-        curr_selected_label: Optional[str] = None, 
+        curr_selected_label: Optional[Union[str,List[str]]] = None,
         enable: EnableButtons = EnableButtons()
         ):
         """Create layout for buttons
         """        
+        # Ensure that the selected label is of the correct type
+        if curr_selected_label is not None:
+            if self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE:
+                assert type(curr_selected_label) == str, f"Single selection mode expects a str label but got: {curr_selected_label}"
+            elif self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE:
+                assert type(curr_selected_label) == list, f"Multiple selection mode expects a list of str labels but got: {curr_selected_label}"
+
         style_prev = {"width": "100%"} 
         style_next_save = {"width": "100%"} 
         style_skip = {"width": "100%"} 
@@ -259,7 +285,7 @@ class AnnotateImageLabelsAIO(html.Div):
             value=curr_selected_label, 
             id=self.ids.dropdown(aio_id), 
             style=style_dropdown,
-            multi=self.controller.options.selection_mode == ImageAnnotationOptions.SelectionMode.MULTIPLE
+            multi=self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE
             )
         prev_button = dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev)
         next_button = dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save)
