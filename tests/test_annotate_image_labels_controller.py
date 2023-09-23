@@ -48,4 +48,36 @@ class TestImageAnnotationController:
         with pytest.raises(NoCurrLabelError):
             empty_controller.store_label("cat")
 
-    
+    def test_skip(self, controller: ImageAnnotationController):
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
+        controller.skip()
+        assert controller.curr is not None
+        assert controller.curr.image_name == "astronaut"
+
+    def test_previous(self, controller: ImageAnnotationController):
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
+        controller.skip()
+        controller.previous()
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
+
+    def test_skip_to_next_missing_ann(self, controller: ImageAnnotationController):
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
+        controller.store_label("cat")
+        assert controller.curr is not None
+        assert controller.curr.image_name == "astronaut"
+        controller.store_label("dog")
+        assert controller.curr is not None
+        assert controller.curr.image_name == "camera"
+        controller.previous()
+        controller.previous()
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
+        controller.skip_to_next_missing_ann()
+        assert controller.curr is not None
+        assert controller.curr.image_name == "camera"
+
+

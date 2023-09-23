@@ -137,7 +137,7 @@ class ImageAnnotationController:
         label_value = self._get_existing_label(image_name)
         self._curr = ImageLabel(image_idx, image_name, image, label_value)
 
-    def skip_to_next_missing_ann(self) -> Optional[ImageLabel]:
+    def skip_to_next_missing_ann(self):
         image, image_idx = None, None
         image_name = self._curr.image_name if self._curr is not None else None
         while image_name in self.annotations.image_to_entry:
@@ -145,8 +145,9 @@ class ImageAnnotationController:
         if image is not None and image_idx is not None and image_name is not None:
             # Changed image
             label_value = self._get_existing_label(image_name)
-            return ImageLabel(image_idx, image_name, image, label_value)
-        return None
+            self._curr = ImageLabel(image_idx, image_name, image, label_value)
+        else:
+            self._curr = None
 
     def _get_existing_label(self, image_name: str) -> Optional[str]:
         if image_name in self.annotations.image_to_entry:
