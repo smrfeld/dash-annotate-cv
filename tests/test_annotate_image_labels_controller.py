@@ -5,7 +5,6 @@ import pytest
 @pytest.fixture
 def controller():
     images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
-
     return ImageAnnotationController(
         label_source=LabelSource(labels=["cat", "dog"]),
         image_source=ImageSource(images=images),

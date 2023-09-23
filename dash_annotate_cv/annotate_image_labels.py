@@ -104,15 +104,15 @@ class AnnotateImageLabelsAIO(html.Div):
             self.aio_id = aio_id
 
         super().__init__(self._create_layout(self.aio_id)) # Equivalent to `html.Div([...])`
-
         self._define_callbacks()
     
-    def _refresh_layout(self):
+    def _refresh_layout(self) -> Optional[str]:
         # Update layout
         image = self.controller.curr.image if self.controller.curr is not None else None
         label = self.controller.curr.label_value if self.controller.curr is not None else None
         self._curr_image_layout = self._create_layout_for_image(image)                    
         self._curr_alert_layout = self._alert_for_existing_label(label)
+        return label
 
     def _define_callbacks(self):
         """Define callbacks, called in constructor
@@ -120,6 +120,7 @@ class AnnotateImageLabelsAIO(html.Div):
         @callback(
             Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.buttons(MATCH), 'children'),
+            Output(self.ids.dropdown(MATCH), 'value'),
             Input(self.ids.next_submit(MATCH), 'n_clicks'),
             Input(self.ids.next_skip(MATCH), 'n_clicks'),
             Input(self.ids.prev(MATCH), 'n_clicks'),
@@ -131,28 +132,35 @@ class AnnotateImageLabelsAIO(html.Div):
             trigger_id = get_trigger_id()
             print(f"Trigger: '{trigger_id}'")
 
-            is_initial = trigger_id == "" and self.controller.curr is None
+            is_initial = trigger_id == ""
 
             try:
-                if trigger_id == self.ids.next_submit(MATCH)["subcomponent"] or is_initial:
+                if is_initial:
+                    # Initial state
+                    new_dropdown_value = self._refresh_layout()
+                
+                elif trigger_id == self.ids.next_submit(MATCH)["subcomponent"]:
                     # Submit button was pressed
-                    self.controller.store_label(dropdown_value)
-                    self._refresh_layout()
+                    if dropdown_value is not None:
+                        self.controller.store_label(dropdown_value)
+                    else:
+                        self.controller.skip()
+                    new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
                     self.controller.skip()
-                    self._refresh_layout()
+                    new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
                     self.controller.previous()
-                    self._refresh_layout()
+                    new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
                     # Next missing annotation button was pressed
                     self.controller.skip_to_next_missing_ann()
-                    self._refresh_layout()
+                    new_dropdown_value = self._refresh_layout()
                 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
@@ -161,26 +169,16 @@ class AnnotateImageLabelsAIO(html.Div):
                 else:
                     print(f"Unknown button pressed: {trigger_id}")
 
-                if new_dropdown_value is not None and new_dropdown_value in self.controller.labels:
-                    self._curr_button_layout = self._create_layout_buttons(
-                        aio_id=self.aio_id, 
-                        curr_selected_label=new_dropdown_value,
-                        enable_dropdown=True,
-                        enable_next_save=True, 
-                        enable_prev=True, 
-                        enable_skip=True, 
-                        enable_skip_next_missing=True
-                        )
-                else:
-                    self._curr_button_layout = self._create_layout_buttons(
-                        aio_id=self.aio_id, 
-                        curr_selected_label=new_dropdown_value,
-                        enable_dropdown=True,
-                        enable_next_save=False, 
-                        enable_prev=True, 
-                        enable_skip=True, 
-                        enable_skip_next_missing=True
-                        )
+                enable_next_save = new_dropdown_value is not None and new_dropdown_value in self.controller.labels
+                self._curr_button_layout = self._create_layout_buttons(
+                    aio_id=self.aio_id, 
+                    curr_selected_label=new_dropdown_value,
+                    enable_dropdown=True,
+                    enable_next_save=enable_next_save, 
+                    enable_prev=True, 
+                    enable_skip=True, 
+                    enable_skip_next_missing=True
+                    )
 
             except IndexAboveError:
                 self._curr_image_layout = html.Div()
@@ -209,7 +207,7 @@ class AnnotateImageLabelsAIO(html.Div):
                     )
 
             print("Returning new dropdown value", new_dropdown_value)
-            return self._curr_image_layout, self._curr_button_layout
+            return self._curr_image_layout, self._curr_button_layout, new_dropdown_value
     
     def _alert_for_existing_label(self, existing_label: Optional[str]) -> Optional[dbc.Alert]:
         """Create layout for existing label

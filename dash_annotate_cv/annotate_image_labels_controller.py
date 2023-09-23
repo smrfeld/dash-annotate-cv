@@ -39,12 +39,18 @@ class ImageAnnotationOptions(DataClassDictMixin):
     author: Optional[str] = None
 
 class NoCurrLabelError(Exception):
+    """No current label
+    """
     pass
 
 class InvalidLabelError(Exception):
+    """Invalid label
+    """
     pass
 
 class ImageAnnotationController:
+    """Image annotation controller
+    """
 
     def __init__(
         self,
@@ -54,6 +60,15 @@ class ImageAnnotationController:
         annotations_existing: Optional[ImageAnnotations] = None,
         options: ImageAnnotationOptions = ImageAnnotationOptions()
         ):
+        """Constructor
+
+        Args:
+            label_source (LabelSource): Source of labels
+            image_source (ImageSource): Source of images
+            annotation_storage (AnnotationStorage, optional): Where to store annotations. Defaults to AnnotationStorage().
+            annotations_existing (Optional[ImageAnnotations], optional): Existing annotations to continue from, if any. Defaults to None.
+            options (Options, optional): Options. Defaults to Options().
+        """        
         self.options = options
         self.annotation_writer = AnnotationWriter(annotation_storage)
         self.label_source = label_source
@@ -72,17 +87,41 @@ class ImageAnnotationController:
     
     @property
     def no_images(self) -> int:
+        """Number of images in dataset
+
+        Returns:
+            int: Number of images in dataset
+        """        
         return self._image_iterator.no_images
 
     @property
     def labels(self) -> List[str]:
+        """Labels
+
+        Returns:
+            List[str]: Labels
+        """        
         return list(self._labels)
 
     @property
     def curr(self) -> Optional[ImageLabel]:
+        """Current image,label to label
+
+        Returns:
+            Optional[ImageLabel]: Current image,label to label
+        """        
         return self._curr
 
     def store_label(self, label_value: str):
+        """Store label for image
+
+        Args:
+            label_value (str): Label value
+
+        Raises:
+            NoCurrLabelError: If no current label
+            InvalidLabelError: If provided label is not in label source
+        """        
         if self._curr is None:
             raise NoCurrLabelError("No current label")
 
@@ -128,16 +167,22 @@ class ImageAnnotationController:
         self._curr = ImageLabel(image_idx, image_name, image, new_label_value)
 
     def skip(self):
+        """Skip to next image
+        """        
         image_idx, image_name, image = self._image_iterator.next()
         label_value = self._get_existing_label(image_name)
         self._curr = ImageLabel(image_idx, image_name, image, label_value)
 
     def previous(self):
+        """Go to previous image
+        """        
         image_idx, image_name, image = self._image_iterator.prev()
         label_value = self._get_existing_label(image_name)
         self._curr = ImageLabel(image_idx, image_name, image, label_value)
 
     def skip_to_next_missing_ann(self):
+        """Skip to next image with no annotation
+        """        
         image, image_idx = None, None
         image_name = self._curr.image_name if self._curr is not None else None
         while image_name in self.annotations.image_to_entry:
@@ -150,6 +195,14 @@ class ImageAnnotationController:
             self._curr = None
 
     def _get_existing_label(self, image_name: str) -> Optional[str]:
+        """Get existing label for image
+
+        Args:
+            image_name (str): Name of image
+
+        Returns:
+            Optional[str]: Label value, if any
+        """        
         if image_name in self.annotations.image_to_entry:
             entry = self.annotations.image_to_entry[image_name]
             if entry.label.single is not None and entry.label.single in self._labels:
