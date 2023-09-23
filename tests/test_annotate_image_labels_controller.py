@@ -1,4 +1,4 @@
-from dash_annotate_cv import AnnotateImageLabelsController, AnnotateImageLabelsOptions, ImageAnnotations, ImageSource, LabelSource, AnnotationStorage, ImageLabel, InvalidLabelError, NoCurrLabelError
+from dash_annotate_cv import AnnotateImageLabelsController, AnnotateImageLabelsOptions, ImageSource, LabelSource, AnnotationStorage, InvalidLabelError, NoCurrLabelError, WrongSelectionMode
 from skimage import data
 import pytest
 
@@ -10,6 +10,16 @@ def controller():
         image_source=ImageSource(images=images),
         annotation_storage=AnnotationStorage(),
         options=AnnotateImageLabelsOptions()
+        )
+
+@pytest.fixture
+def controller_multiple():
+    images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
+    return AnnotateImageLabelsController(
+        label_source=LabelSource(labels=["cat", "dog"]),
+        image_source=ImageSource(images=images),
+        annotation_storage=AnnotationStorage(),
+        options=AnnotateImageLabelsOptions(selection_mode=AnnotateImageLabelsOptions.SelectionMode.MULTIPLE)
         )
 
 @pytest.fixture
@@ -38,7 +48,31 @@ class TestAnnotateImageLabelsController:
         assert controller.curr is not None
         assert controller.curr.image_idx == 1
         assert controller.curr.image_name == "astronaut"
-    
+
+        # Check throwing for multiple
+        with pytest.raises(WrongSelectionMode):
+            controller.store_label_multiple(["cat","dog"])
+
+    def test_store_label_multiple(self, controller_multiple: AnnotateImageLabelsController):        
+        # Init state
+        assert controller_multiple.curr is not None
+        assert controller_multiple.curr.image_name == "chelsea"
+
+        # Label
+        controller_multiple.store_label_multiple(["cat","dog"])
+
+        # Check stored
+        assert controller_multiple.annotations.image_to_entry["chelsea"].label.multiple == ["cat","dog"]
+
+        # Check next
+        assert controller_multiple.curr is not None
+        assert controller_multiple.curr.image_idx == 1
+        assert controller_multiple.curr.image_name == "astronaut"
+
+        # Check throwing for single
+        with pytest.raises(WrongSelectionMode):
+            controller_multiple.store_label("cat")
+
     def test_store_invalid_label(self, controller: AnnotateImageLabelsController):
         with pytest.raises(InvalidLabelError):
             controller.store_label("invalid")

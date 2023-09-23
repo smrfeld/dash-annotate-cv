@@ -42,6 +42,11 @@ class AnnotateImageLabelsOptions(DataClassDictMixin):
     # Name of author to store
     author: Optional[str] = None
 
+class WrongSelectionMode(Exception):
+    """Wrong selection mode
+    """
+    pass
+
 class NoCurrLabelError(Exception):
     """No current label
     """
@@ -123,9 +128,13 @@ class AnnotateImageLabelsController:
             label_values (List[str]): Label values
 
         Raises:
+            WrongSelectionMode: If selection mode is not multiple
             NoCurrLabelError: If no current label
             InvalidLabelError: If provided label is not in label source
         """
+        if self.options.selection_mode != AnnotateImageLabelsOptions.SelectionMode.MULTIPLE:
+            raise WrongSelectionMode("Selection mode is not multiple but attempting to store multiple labels")
+
         for label_value in label_values:
             if not label_value in self._labels:
                 raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (label_value, str(self._labels)))
@@ -144,9 +153,13 @@ class AnnotateImageLabelsController:
             label_value (str): Label value
 
         Raises:
+            WrongSelectionMode: If selection mode is not single
             NoCurrLabelError: If no current label
             InvalidLabelError: If provided label is not in label source
         """
+        if self.options.selection_mode != AnnotateImageLabelsOptions.SelectionMode.SINGLE:
+            raise WrongSelectionMode("Selection mode is not single but attempting to store single label")
+
         if not label_value in self._labels:
             raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (label_value, str(self._labels)))
 
