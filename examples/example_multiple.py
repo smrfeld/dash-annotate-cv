@@ -18,13 +18,13 @@ if __name__ == "__main__":
     storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
 
     # Restart from existing annotations if any
-    if os.path.exists("annotations.json"):
-        with open("annotations.json","r") as f:
+    if os.path.exists("example_multiple.json"):
+        with open("example_multiple.json","r") as f:
             annotations_existing = ImageAnnotations.from_dict(json.load(f))
     else:
         annotations_existing = None
     
-    # Options for the app
+    # Options for the  - single or multi-selection
     options = AnnotateImageLabelsOptions(
         selection_mode=AnnotateImageLabelsOptions.SelectionMode.MULTIPLE
         )
@@ -34,4 +34,4 @@ if __name__ == "__main__":
         html.H1("Annotate Images"),
         AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage, annotations_existing=annotations_existing, options=options)
         ])
-    app.run(debug=True)
+    app.run(debug=False)
