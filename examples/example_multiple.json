@@ -1,0 +1,61 @@
+{
+   "image_to_entry": {
+      "chelsea": {
+         "image_name": "chelsea",
+         "label": {
+            "multiple": [
+               "cat",
+               "cute"
+            ],
+            "timestamp": 1695583060.453788
+         },
+         "history": [
+            {
+               "multiple": [
+                  "cat",
+                  "cute"
+               ],
+               "timestamp": 1695583060.453788
+            }
+         ]
+      },
+      "astronaut": {
+         "image_name": "astronaut",
+         "label": {
+            "multiple": [
+               "astronaut",
+               "space"
+            ],
+            "timestamp": 1695583065.203316
+         },
+         "history": [
+            {
+               "multiple": [
+                  "astronaut",
+                  "space"
+               ],
+               "timestamp": 1695583065.203316
+            }
+         ]
+      },
+      "camera": {
+         "image_name": "camera",
+         "label": {
+            "multiple": [
+               "camera",
+               "photography"
+            ],
+            "timestamp": 1695583069.251143
+         },
+         "history": [
+            {
+               "multiple": [
+                  "camera",
+                  "photography"
+               ],
+               "timestamp": 1695583069.251143
+            }
+         ]
+      }
+   }
+}

@@ -49,8 +49,11 @@ Roadmap for future tasks:
 You can also check out the [examples](examples).
 
 ```python
+# Import the library
+import dash_annotate_cv as dac
+
+# Other imports
 from dash import Dash, html
-from dash_annotate_cv import AnnotateImageLabelsAIO, ImageSource, LabelSource, AnnotationStorage, ImageAnnotations
 import dash_bootstrap_components as dbc
 from skimage import data
 
@@ -58,16 +61,16 @@ from skimage import data
 images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ]
 
 # Set up the image and label sources
-image_source = ImageSource(images=images)
-label_source = LabelSource(labels=["astronaut", "camera", "cat"])
+image_source = dac.ImageSource(images=images)
+label_source = dac.LabelSource(labels=["astronaut", "camera", "cat"])
 
 # Set up writing
-storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
+storage = dac.AnnotationStorage(storage_type=dac.AnnotationStorage.Type.JSON, json_file="annotations.json")
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container([
     html.H1("Annotate Images"),
-    AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage)
+    dac.AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage)
     ])
 app.run(debug=True)
 ```
@@ -80,7 +83,7 @@ Loading the annotations is as simple as:
 
 ```python
 with open("annotations.json","r") as f:
-    annotations = ImageAnnotations.from_dict(json.load(f))
+    annotations = dac.ImageAnnotations.from_dict(json.load(f))
 ```
 
 See the `ImageAnnotations` class for more information on the format.
