@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List, Tuple
 from PIL import Image
@@ -32,7 +32,7 @@ class ImageSource(DataClassDictMixin):
     source_type: Type = Type.DEFAULT
 
     # Default source: list of image names and images
-    images: Optional[List[Tuple[str,Image.Image]]] = None
+    images: Optional[List[Tuple[str,Image.Image]]] = field(default=None, metadata={"serialize": "omit"})
 
     # Folder source
     folder_name: Optional[str] = None

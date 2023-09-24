@@ -30,4 +30,5 @@ setup(
         "scikit-image"
     ],
     python_requires=">=3.6",
+    scripts=['bin/dacv']
 )
