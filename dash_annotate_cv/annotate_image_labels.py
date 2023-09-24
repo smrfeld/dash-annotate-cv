@@ -12,6 +12,10 @@ import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class AnnotateImageLabelsAIO(html.Div):
@@ -124,7 +128,7 @@ class AnnotateImageLabelsAIO(html.Div):
         def submit_button(submit_n_clicks, skip_n_clicks, prev_n_clicks, next_missing_ann_n_clicks, dropdown_value):
             new_dropdown_value = dropdown_value
             trigger_id = get_trigger_id()
-            print(f"Trigger: '{trigger_id}'")
+            logger.debug(f"Trigger: '{trigger_id}'")
 
             is_initial = trigger_id == ""
             enable_btns = AnnotateImageLabelsAIO.EnableButtons()
@@ -166,11 +170,11 @@ class AnnotateImageLabelsAIO(html.Div):
                 
                 elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
                     # Dropdown was changed
-                    print(f"Dropdown changed: {new_dropdown_value}")
+                    logger.debug(f"Dropdown changed: {new_dropdown_value}")
                     pass
 
                 else:
-                    print(f"Unknown button pressed: {trigger_id}")
+                    logger.debug(f"Unknown button pressed: {trigger_id}")
 
                 # Enable/disable buttons
                 if new_dropdown_value is not None:

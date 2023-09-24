@@ -3,12 +3,19 @@ from enum import Enum
 from typing import Optional, List, Tuple
 from PIL import Image
 import os
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 class IndexBelowError(Exception):
     pass
 
+
 class IndexAboveError(Exception):
     pass
+
 
 @dataclass
 class ImageSource:
@@ -35,6 +42,7 @@ class ImageSource:
     # List of files source
     list_of_files: Optional[List[str]] = None
 
+
     def __post_init__(self):
         if self.source_type == ImageSource.Type.DEFAULT:
             assert self.images is not None, "images must be set if source_type is DEFAULT"
@@ -45,10 +53,12 @@ class ImageSource:
         else:
             raise NotImplementedError
 
+
 class ImageIterator:
     """Iterator over images
     """
     
+
     def __init__(self, image_source: ImageSource):
         self.image_source = image_source
         self.idx_of_curr_img = -1
@@ -67,8 +77,9 @@ class ImageIterator:
             assert image_source.images is not None, "images must be set if source_type is DEFAULT"
             self.no_images = len(image_source.images)
     
+
     def _image_at_idx(self, idx: int) -> Tuple[int,str,Image.Image]:
-        print("Loading image at index", idx)
+        logger.debug(f"Loading image at index {idx}")
         if self.image_source.source_type == ImageSource.Type.DEFAULT:
             assert self.image_source.images is not None, "images must be set if source_type is DEFAULT"
             ret = self.image_source.images[idx]
@@ -76,6 +87,7 @@ class ImageIterator:
         else:
             assert self._file_names is not None, "file_names must be set if source_type is not DEFAULT"
             return idx, self._file_names[idx], Image.open(self._file_names[idx])
+
 
     def next(self) -> Tuple[int,str,Image.Image]:
         if self.idx_of_curr_img >= self.no_images-1:
@@ -89,6 +101,7 @@ class ImageIterator:
 
         return result
 
+
     def prev(self) -> Tuple[int,str,Image.Image]:
         if self.idx_of_curr_img <= 0:
             self.idx_of_curr_img = -1
@@ -97,6 +110,7 @@ class ImageIterator:
         self.idx_of_curr_img -= 1
         result = self._image_at_idx(self.idx_of_curr_img)
         return result
+
 
     def __iter__(self):
         return self
