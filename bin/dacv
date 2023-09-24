@@ -7,7 +7,7 @@ import dash_bootstrap_components as dbc
 import logging
 import sys
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from mashumaro import DataClassDictMixin
 import yaml
 from enum import Enum
@@ -40,10 +40,10 @@ class Conf(DataClassDictMixin):
 
     
     mode: Mode
-    labels: dacv.LabelSource
-    images: dacv.ImageSource
-    storage: dacv.AnnotationStorage = dacv.AnnotationStorage()
-    options_image_labels: dacv.AnnotateImageLabelsOptions = dacv.AnnotateImageLabelsOptions()
+    label_source: dacv.LabelSource
+    image_source: dacv.ImageSource
+    storage: dacv.AnnotationStorage = field(default_factory=dacv.AnnotationStorage)
+    options_image_labels: dacv.AnnotateImageLabelsOptions = field(default_factory=dacv.AnnotateImageLabelsOptions)
 
 
     def check_valid(self):
@@ -69,8 +69,8 @@ if __name__ == "__main__":
 
     if conf.mode == Conf.Mode.IMAGE_LABELS:
         aio = dacv.AnnotateImageLabelsAIO(
-            label_source=conf.labels, 
-            image_source=conf.images, 
+            label_source=conf.label_source, 
+            image_source=conf.image_source, 
             annotation_storage=conf.storage, 
             annotations_existing=annotations_existing, 
             options=conf.options_image_labels

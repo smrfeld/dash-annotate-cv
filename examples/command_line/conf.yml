@@ -1,0 +1,34 @@
+---
+# Annotation mode
+# image_labels = Annotate image labels
+mode: image_labels
+
+# Label source
+label_source:
+  labels:
+  - astronaut
+  - camera
+  - cat
+
+# Image source
+image_source:
+
+  # Image source type
+  source_type: list_of_files
+
+  # List of files
+  list_of_files:
+  - ex_chelsea.jpg
+  - ex_astronaut.jpg
+  - ex_camera.jpg
+
+# Storage (optional)
+storage:
+  storage_type: json
+  json_file: example.json
+
+# Options (optional)
+options_image_labels:
+
+  # How many labels can be selected per image
+  selection_mode: single

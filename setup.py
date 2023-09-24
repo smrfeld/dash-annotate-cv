@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="dash_annotate_cv",
-    version="0.1.5",
+    version="0.1.6",
     author="Oliver K. Ernst",
     description="A Python library for computer vision annotation tasks using Dash",
     long_description=long_description,

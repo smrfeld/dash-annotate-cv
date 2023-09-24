@@ -32,7 +32,7 @@ class ImageSource(DataClassDictMixin):
     source_type: Type = Type.DEFAULT
 
     # Default source: list of image names and images
-    images: Optional[List[Tuple[str,Image.Image]]] = field(default=None, metadata={"serialize": "omit"})
+    images: Optional[List[Tuple[str,Image.Image]]] = field(default=None, metadata={"serialize": lambda x: None, "deserialize": lambda x: None})
 
     # Folder source
     folder_name: Optional[str] = None
