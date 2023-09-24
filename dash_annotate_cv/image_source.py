@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple
 from PIL import Image
 import os
 import logging
+from mashumaro import DataClassDictMixin
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class IndexAboveError(Exception):
 
 
 @dataclass
-class ImageSource:
+class ImageSource(DataClassDictMixin):
     """Specification for where to get images from
     """
     

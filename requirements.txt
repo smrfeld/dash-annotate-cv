@@ -7,3 +7,4 @@ mashumaro>=3.9.1
 pandas
 Pillow>=10.0.0
 scikit-image
+pyyaml

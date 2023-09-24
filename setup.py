@@ -26,6 +26,7 @@ setup(
         "mashumaro",
         "pandas",
         "Pillow",
+        "pyyaml",
         "scikit-image"
     ],
     python_requires=">=3.6",

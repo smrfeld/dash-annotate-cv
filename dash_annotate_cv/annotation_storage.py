@@ -38,6 +38,7 @@ class AnnotationStorage(DataClassDictMixin):
         else:
             raise NotImplementedError
 
+
 class AnnotationWriter:
     """Annotation writer
     """
