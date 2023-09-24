@@ -10,26 +10,6 @@
             {
                "single": "cat",
                "timestamp": 1693893968.634796
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435367.1874
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435380.296711
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435382.270315
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435484.469072
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695437162.30125
             }
          ]
       },
@@ -43,14 +23,6 @@
             {
                "single": "camera",
                "timestamp": 1693893977.097665
-            },
-            {
-               "single": "camera",
-               "timestamp": 1695435383.851689
-            },
-            {
-               "single": "camera",
-               "timestamp": 1695437166.527937
             }
          ]
       },
@@ -64,26 +36,6 @@
             {
                "single": "astronaut",
                "timestamp": 1695435195.254453
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695435370.552859
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695435383.023856
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435489.452765
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695435493.456389
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695437164.89879
             }
          ]
       }

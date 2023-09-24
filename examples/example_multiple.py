@@ -12,10 +12,10 @@ if __name__ == "__main__":
 
     # Set up the image and label sources
     image_source = ImageSource(images=images)
-    label_source = LabelSource(labels=["astronaut", "camera", "cat"])
+    label_source = LabelSource(labels=["astronaut", "camera", "cat", "cute", "photography", "space"])
 
     # Set up writing
-    storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
+    storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="example_multiple.json")
 
     # Restart from existing annotations if any
     if os.path.exists("example_multiple.json"):

@@ -15,7 +15,7 @@ if __name__ == "__main__":
     label_source = LabelSource(labels=["astronaut", "camera", "cat"])
 
     # Set up writing
-    storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="annotations.json")
+    storage = AnnotationStorage(storage_type=AnnotationStorage.Type.JSON, json_file="example_single.json")
 
     # Restart from existing annotations if any
     if os.path.exists("example_single.json"):

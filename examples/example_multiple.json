@@ -3,87 +3,57 @@
       "chelsea": {
          "image_name": "chelsea",
          "label": {
-            "single": "cat",
-            "timestamp": 1695437162.30125
+            "multiple": [
+               "cat",
+               "cute"
+            ],
+            "timestamp": 1695583060.453788
          },
          "history": [
             {
-               "single": "cat",
-               "timestamp": 1693893968.634796
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435367.1874
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435380.296711
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435382.270315
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435484.469072
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695437162.30125
-            }
-         ]
-      },
-      "camera": {
-         "image_name": "camera",
-         "label": {
-            "single": "camera",
-            "timestamp": 1695437166.527937
-         },
-         "history": [
-            {
-               "single": "camera",
-               "timestamp": 1693893977.097665
-            },
-            {
-               "single": "camera",
-               "timestamp": 1695435383.851689
-            },
-            {
-               "single": "camera",
-               "timestamp": 1695437166.527937
+               "multiple": [
+                  "cat",
+                  "cute"
+               ],
+               "timestamp": 1695583060.453788
             }
          ]
       },
       "astronaut": {
          "image_name": "astronaut",
          "label": {
-            "single": "astronaut",
-            "timestamp": 1695437164.89879
+            "multiple": [
+               "astronaut",
+               "space"
+            ],
+            "timestamp": 1695583065.203316
          },
          "history": [
             {
-               "single": "astronaut",
-               "timestamp": 1695435195.254453
-            },
+               "multiple": [
+                  "astronaut",
+                  "space"
+               ],
+               "timestamp": 1695583065.203316
+            }
+         ]
+      },
+      "camera": {
+         "image_name": "camera",
+         "label": {
+            "multiple": [
+               "camera",
+               "photography"
+            ],
+            "timestamp": 1695583069.251143
+         },
+         "history": [
             {
-               "single": "astronaut",
-               "timestamp": 1695435370.552859
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695435383.023856
-            },
-            {
-               "single": "cat",
-               "timestamp": 1695435489.452765
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695435493.456389
-            },
-            {
-               "single": "astronaut",
-               "timestamp": 1695437164.89879
+               "multiple": [
+                  "camera",
+                  "photography"
+               ],
+               "timestamp": 1695583069.251143
             }
          ]
       }
