@@ -43,7 +43,7 @@ class Conf(DataClassDictMixin):
     label_source: dacv.LabelSource
     image_source: dacv.ImageSource
     storage: dacv.AnnotationStorage = field(default_factory=dacv.AnnotationStorage)
-    options_image_labels: dacv.AnnotateImageLabelsOptions = field(default_factory=dacv.AnnotateImageLabelsOptions)
+    options_image_labels: dacv.AnnotateImageOptions = field(default_factory=dacv.AnnotateImageOptions)
 
 
     def check_valid(self):

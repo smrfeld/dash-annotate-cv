@@ -36,8 +36,8 @@ if __name__ == "__main__":
     annotations_existing = dacv.load_image_anns_if_exist(storage)
     
     # Options for the  - single or multi-selection
-    options = dacv.AnnotateImageLabelsOptions(
-        selection_mode=dacv.AnnotateImageLabelsOptions.SelectionMode.MULTIPLE
+    options = dacv.AnnotateImageOptions(
+        selection_mode=dacv.AnnotateImageOptions.SelectionMode.MULTIPLE
         )
 
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])

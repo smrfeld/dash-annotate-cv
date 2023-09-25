@@ -1,4 +1,4 @@
-from dash_annotate_cv.annotate_image_labels_controller import AnnotateImageLabelsController, AnnotateImageLabelsOptions
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -13,9 +13,15 @@ import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
 import logging
+from enum import Enum
 
 
 logger = logging.getLogger(__name__)
+
+
+class SelectionMode(Enum):
+    SINGLE = "single"
+    MULTIPLE = "multiple"
 
 
 class AnnotateImageLabelsAIO(html.Div):
@@ -69,7 +75,8 @@ class AnnotateImageLabelsAIO(html.Div):
         annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
         aio_id: Optional[str] = None,
-        options: AnnotateImageLabelsOptions = AnnotateImageLabelsOptions()
+        options: AnnotateImageOptions = AnnotateImageOptions(),
+        selection_mode: SelectionMode = SelectionMode.SINGLE
         ):
         """Constructor
 
@@ -80,8 +87,9 @@ class AnnotateImageLabelsAIO(html.Div):
             annotations_existing (Optional[ImageAnnotations], optional): Existing annotations to continue from, if any. Defaults to None.
             aio_id (Optional[str], optional): IDs for components. Defaults to None.
             options (Options, optional): Options. Defaults to Options().
+            selection_mode (SelectionMode): Selection mode. Defaults to SelectionMode.SINGLE.
         """
-        self.controller = AnnotateImageLabelsController(
+        self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
             annotation_storage=annotation_storage,
@@ -89,6 +97,7 @@ class AnnotateImageLabelsAIO(html.Div):
             options=options
             )
         self._curr_image_layout, self._curr_button_layout, self._curr_alert_layout = None, None, None
+        self.selection_mode = selection_mode
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -108,7 +117,12 @@ class AnnotateImageLabelsAIO(html.Div):
     
     def _refresh_layout(self) -> Optional[Union[str,List[str]]]:
         image = self.controller.curr.image if self.controller.curr is not None else None
-        label = self.controller.curr.label_value if self.controller.curr is not None else None
+        if self.selection_mode == SelectionMode.SINGLE:
+            label = self.controller.curr.label_single if self.controller.curr is not None else None
+        elif self.selection_mode == SelectionMode.MULTIPLE:
+            label = self.controller.curr.label_multiple if self.controller.curr is not None else None
+        else:
+            raise NotImplementedError(f"Unknown selection mode: {self.selection_mode}")
         self._curr_image_layout = self._create_layout_for_image(image)                    
         self._curr_alert_layout = self._alert_for_existing_label(label)
         return label
@@ -142,25 +156,25 @@ class AnnotateImageLabelsAIO(html.Div):
                     # Submit button was pressed
                     if dropdown_value is not None:
                         if type(dropdown_value) == str:
-                            assert self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE, f"Single selection mode expects a str label but got: {dropdown_value}"
-                            self.controller.store_label(dropdown_value)
+                            assert self.selection_mode == SelectionMode.SINGLE, f"Single selection mode expects a str label but got: {dropdown_value}"
+                            self.controller.store_label_single(dropdown_value)
                         elif type(dropdown_value) == list:
-                            assert self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE, f"Multiple selection mode expects a list of str labels but got: {dropdown_value}"
+                            assert self.selection_mode == SelectionMode.MULTIPLE, f"Multiple selection mode expects a list of str labels but got: {dropdown_value}"
                             self.controller.store_label_multiple(dropdown_value)
                         else:
                             raise NotImplementedError(f"Unknown type of dropdown value: {type(dropdown_value)} ({dropdown_value})")
                     else:
-                        self.controller.skip()
+                        self.controller.next_image()
                     new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.next_skip(MATCH)["subcomponent"]:
                     # Skip button was pressed
-                    self.controller.skip()
+                    self.controller.next_image()
                     new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.prev(MATCH)["subcomponent"]:
                     # Previous button was pressed
-                    self.controller.previous()
+                    self.controller.previous_image()
                     new_dropdown_value = self._refresh_layout()
 
                 elif trigger_id == self.ids.next_missing_ann(MATCH)["subcomponent"]:
@@ -256,9 +270,9 @@ class AnnotateImageLabelsAIO(html.Div):
         """        
         # Ensure that the selected label is of the correct type
         if curr_selected_label is not None:
-            if self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.SINGLE:
+            if self.selection_mode == SelectionMode.SINGLE:
                 assert type(curr_selected_label) == str, f"Single selection mode expects a str label but got: {curr_selected_label}"
-            elif self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE:
+            elif self.selection_mode == SelectionMode.MULTIPLE:
                 assert type(curr_selected_label) == list, f"Multiple selection mode expects a list of str labels but got: {curr_selected_label}"
 
         style_prev = {"width": "100%"} 
@@ -289,7 +303,7 @@ class AnnotateImageLabelsAIO(html.Div):
             value=curr_selected_label, 
             id=self.ids.dropdown(aio_id), 
             style=style_dropdown,
-            multi=self.controller.options.selection_mode == AnnotateImageLabelsOptions.SelectionMode.MULTIPLE
+            multi=self.selection_mode == SelectionMode.MULTIPLE
             )
         prev_button = dbc.Button("Previous image", color="dark", id=self.ids.prev(aio_id), style=style_prev)
         next_button = dbc.Button("Next (save)", color="success", id=self.ids.next_submit(aio_id), style=style_next_save)

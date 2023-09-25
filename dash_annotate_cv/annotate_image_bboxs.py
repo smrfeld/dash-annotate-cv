@@ -1,4 +1,4 @@
-from dash_annotate_cv.annotate_image_bboxs_controller import AnnotateImageBboxsController, AnnotateImageBboxsOptions
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -49,10 +49,10 @@ class AnnotateImageBboxsAIO(html.Div):
         annotation_storage: AnnotationStorage = AnnotationStorage(),
         annotations_existing: Optional[ImageAnnotations] = None,
         aio_id: Optional[str] = None,
-        options: AnnotateImageBboxsOptions = AnnotateImageBboxsOptions()
+        options: AnnotateImageOptions = AnnotateImageOptions()
         ):
 
-        self.controller = AnnotateImageBboxsController(
+        self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
             annotation_storage=annotation_storage,
@@ -88,9 +88,10 @@ class AnnotateImageBboxsAIO(html.Div):
             ], md=6, id=self.ids.description(aio_id))
         ])
 
-    def _create_layout_for_image(self, image: Optional[Image.Image]):
+    def _create_layout_for_curr_image(self):
         """Create layout for the image
         """        
+        image = self.controller.curr.image if self.controller.curr is not None else None
         if image is None:
             return []
         fig = px.imshow(image)
@@ -107,8 +108,7 @@ class AnnotateImageBboxsAIO(html.Div):
             Input(self.ids.graph_picture(MATCH), "relayoutData")
             )
         def update_bboxs(relayout_data):
-            image = self.controller.curr.image if self.controller.curr is not None else None
-            self._curr_image_layout = self._create_layout_for_image(image)                    
+            self._curr_image_layout = self._create_layout_for_curr_image()                    
 
             if "shapes" in relayout_data:
                 return json.dumps(relayout_data["shapes"], indent=2)
