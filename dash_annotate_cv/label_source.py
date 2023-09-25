@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
+from mashumaro import DataClassDictMixin
+
 
 @dataclass
-class LabelSource:
+class LabelSource(DataClassDictMixin):
     """Specification for where to get labels from
     """
 

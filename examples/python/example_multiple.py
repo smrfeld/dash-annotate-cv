@@ -1,5 +1,5 @@
 # Import dash_annotate_cv package
-import dash_annotate_cv as dac
+import dash_annotate_cv as dacv
 
 
 # Other imports
@@ -28,27 +28,21 @@ if __name__ == "__main__":
     images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
 
     # Set up the image and label sources
-    image_source = dac.ImageSource(images=images)
-    label_source = dac.LabelSource(labels=["astronaut", "camera", "cat"])
+    image_source = dacv.ImageSource(images=images)
+    label_source = dacv.LabelSource(labels=["astronaut", "camera", "cat", "cute", "photography", "space"])
 
     # Set up writing
-    storage = dac.AnnotationStorage(storage_type=dac.AnnotationStorage.Type.JSON, json_file="example_single.json")
-
-    # Restart from existing annotations if any
-    if os.path.exists("example_single.json"):
-        with open("example_single.json","r") as f:
-            annotations_existing = dac.ImageAnnotations.from_dict(json.load(f))
-    else:
-        annotations_existing = None
+    storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_multiple.json")
+    annotations_existing = dacv.load_image_anns_if_exist(storage)
     
     # Options for the  - single or multi-selection
-    options = dac.AnnotateImageLabelsOptions(
-        selection_mode=dac.AnnotateImageLabelsOptions.SelectionMode.SINGLE
+    options = dacv.AnnotateImageLabelsOptions(
+        selection_mode=dacv.AnnotateImageLabelsOptions.SelectionMode.MULTIPLE
         )
 
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
     app.layout = dbc.Container([
         html.H1("Annotate Images"),
-        dac.AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage, annotations_existing=annotations_existing, options=options)
+        dacv.AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage, annotations_existing=annotations_existing, options=options)
         ])
     app.run(debug=False)

@@ -10,6 +10,8 @@ from enum import Enum
 from mashumaro import DataClassDictMixin
 import os
 import datetime
+import json
+
 
 @dataclass
 class ImageLabel:
@@ -17,6 +19,7 @@ class ImageLabel:
     image_name: str
     image: Image.Image
     label_value: Optional[Union[str,List[str]]]
+
 
 @dataclass
 class AnnotateImageLabelsOptions(DataClassDictMixin):
@@ -42,20 +45,24 @@ class AnnotateImageLabelsOptions(DataClassDictMixin):
     # Name of author to store
     author: Optional[str] = None
 
+
 class WrongSelectionMode(Exception):
     """Wrong selection mode
     """
     pass
+
 
 class NoCurrLabelError(Exception):
     """No current label
     """
     pass
 
+
 class InvalidLabelError(Exception):
     """Invalid label
     """
     pass
+
 
 class AnnotateImageLabelsController:
     """Image annotation controller
@@ -274,3 +281,17 @@ class AnnotateImageLabelsController:
                     label = [label]
         
         return label
+
+
+def load_image_anns_if_exist(storage: AnnotationStorage) -> Optional[ImageAnnotations]:
+    if storage.storage_type == AnnotationStorage.Type.NONE:
+        return None
+    elif storage.storage_type == AnnotationStorage.Type.JSON:
+        assert storage.json_file is not None, "json_file must be set if storage_type is JSON"
+
+        # Restart from existing annotations if any
+        if os.path.exists(storage.json_file):
+            with open(storage.json_file,"r") as f:
+                return ImageAnnotations.from_dict(json.load(f))
+        else:
+            return None

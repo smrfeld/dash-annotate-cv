@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List, Tuple
 from PIL import Image
 import os
 import logging
+from mashumaro import DataClassDictMixin
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ class IndexAboveError(Exception):
 
 
 @dataclass
-class ImageSource:
+class ImageSource(DataClassDictMixin):
     """Specification for where to get images from
     """
     
@@ -31,7 +32,7 @@ class ImageSource:
     source_type: Type = Type.DEFAULT
 
     # Default source: list of image names and images
-    images: Optional[List[Tuple[str,Image.Image]]] = None
+    images: Optional[List[Tuple[str,Image.Image]]] = field(default=None, metadata={"serialize": lambda x: None, "deserialize": lambda x: None})
 
     # Folder source
     folder_name: Optional[str] = None
