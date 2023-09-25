@@ -19,6 +19,10 @@ from PIL import Image
 from dataclasses import dataclass
 import logging
 
+
+logger = logging.getLogger(__name__)
+
+
 class AnnotateImageBboxsAIO(html.Div):
     """Annotation component for images
     """
@@ -80,9 +84,13 @@ class AnnotateImageBboxsAIO(html.Div):
     def _create_layout(self, aio_id: str):
         """Create layout for component
         """        
+        logger.debug("Creating layout for component")
+
+        self._curr_image_layout = self._create_layout_for_curr_image()  
+
         return dbc.Row([
             dbc.Col([
-                html.Div(id=self.ids.image(aio_id))
+                html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
             ], md=6),
             dbc.Col([
             ], md=6, id=self.ids.description(aio_id))
@@ -97,20 +105,22 @@ class AnnotateImageBboxsAIO(html.Div):
         fig = px.imshow(image)
         fig.update_layout(dragmode="drawrect")
         fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-        return dcc.Graph(id="graph-styled-annotations", figure=fig)
+        return dcc.Graph(id=self.ids.graph_picture(self.aio_id), figure=fig)
     
     def _define_callbacks(self):
         """Define callbacks
         """        
+        logger.debug("Defining callbacks")
         @callback(
-            Output(self.ids.image(MATCH), 'children'),
             Output(self.ids.description(MATCH), 'children'),
             Input(self.ids.graph_picture(MATCH), "relayoutData")
             )
         def update_bboxs(relayout_data):
-            self._curr_image_layout = self._create_layout_for_curr_image()                    
+            logger.debug("Updating bboxs")
 
             if "shapes" in relayout_data:
                 return json.dumps(relayout_data["shapes"], indent=2)
             else:
-                return self._curr_image_layout, no_update
+                return no_update
+        
+        logger.debug("Defined callbacks")

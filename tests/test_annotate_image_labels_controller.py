@@ -65,14 +65,14 @@ class TestAnnotateImageLabelsController:
         with pytest.raises(NoCurrLabelError):
             empty_controller.store_label_single("cat")
 
-    def test_skip(self, controller: AnnotateImageController):
+    def test_next_image(self, controller: AnnotateImageController):
         assert controller.curr is not None
         assert controller.curr.image_name == "chelsea"
         controller.next_image()
         assert controller.curr is not None
         assert controller.curr.image_name == "astronaut"
 
-    def test_previous(self, controller: AnnotateImageController):
+    def test_previous_image(self, controller: AnnotateImageController):
         assert controller.curr is not None
         assert controller.curr.image_name == "chelsea"
         controller.next_image()

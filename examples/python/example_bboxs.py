@@ -29,23 +29,22 @@ if __name__ == "__main__":
 
     # Set up the image and label sources
     image_source = dacv.ImageSource(images=images)
-    label_source = dacv.LabelSource(labels=["astronaut", "camera", "cat", "cute", "photography", "space"])
+    label_source = dacv.LabelSource(labels=["astronaut", "camera", "cat"])
 
     # Set up writing
-    storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_multiple.json")
+    storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_bboxs.json")
     annotations_existing = dacv.load_image_anns_if_exist(storage)
     
-    aio = dacv.AnnotateImageLabelsAIO(
+    aio = dacv.AnnotateImageBboxsAIO(
         label_source=label_source, 
         image_source=image_source, 
         annotation_storage=storage, 
         annotations_existing=annotations_existing, 
-        options=dacv.AnnotateImageOptions(),
-        selection_mode=dacv.SelectionMode.MULTIPLE
+        options=dacv.AnnotateImageOptions()
         )
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
     app.layout = dbc.Container([
         html.H1("Annotate Images"),
         aio
         ])
-    app.run(debug=False)
+    app.run(debug=True)

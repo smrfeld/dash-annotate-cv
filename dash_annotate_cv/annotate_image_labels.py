@@ -39,7 +39,7 @@ class AnnotateImageLabelsAIO(html.Div):
             'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'dropdown',
             'aio_id': aio_id
-            }
+        }
         next_submit = lambda aio_id: {
             'component': 'AnnotateImageLabelsAIO',
             'subcomponent': 'next_submit',
