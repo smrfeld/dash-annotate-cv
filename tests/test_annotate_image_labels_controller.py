@@ -13,16 +13,6 @@ def controller():
         )
 
 @pytest.fixture
-def controller_multiple():
-    images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
-    return AnnotateImageController(
-        label_source=LabelSource(labels=["cat", "dog"]),
-        image_source=ImageSource(images=images),
-        annotation_storage=AnnotationStorage(),
-        options=AnnotateImageOptions(selection_mode=AnnotateImageOptions.SelectionMode.MULTIPLE)
-        )
-
-@pytest.fixture
 def empty_controller():
     return AnnotateImageController(
         label_source=LabelSource(labels=["cat", "dog"]),
@@ -42,6 +32,7 @@ class TestAnnotateImageLabelsController:
         controller.store_label_single("cat")
 
         # Check stored
+        assert controller.annotations.image_to_entry["chelsea"].label is not None
         assert controller.annotations.image_to_entry["chelsea"].label.single == "cat"
 
         # Check next
@@ -49,21 +40,22 @@ class TestAnnotateImageLabelsController:
         assert controller.curr.image_idx == 1
         assert controller.curr.image_name == "astronaut"
 
-    def test_store_label_multiple(self, controller_multiple: AnnotateImageController):        
+    def test_store_label_multiple(self, controller: AnnotateImageController):        
         # Init state
-        assert controller_multiple.curr is not None
-        assert controller_multiple.curr.image_name == "chelsea"
+        assert controller.curr is not None
+        assert controller.curr.image_name == "chelsea"
 
         # Label
-        controller_multiple.store_label_multiple(["cat","dog"])
+        controller.store_label_multiple(["cat","dog"])
 
         # Check stored
-        assert controller_multiple.annotations.image_to_entry["chelsea"].label.multiple == ["cat","dog"]
+        assert controller.annotations.image_to_entry["chelsea"].label is not None
+        assert controller.annotations.image_to_entry["chelsea"].label.multiple == ["cat","dog"]
 
         # Check next
-        assert controller_multiple.curr is not None
-        assert controller_multiple.curr.image_idx == 1
-        assert controller_multiple.curr.image_name == "astronaut"
+        assert controller.curr is not None
+        assert controller.curr.image_idx == 1
+        assert controller.curr.image_name == "astronaut"
 
     def test_store_invalid_label(self, controller: AnnotateImageController):
         with pytest.raises(InvalidLabelError):
