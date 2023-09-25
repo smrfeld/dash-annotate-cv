@@ -17,6 +17,7 @@ class ImageAnnotations(DataClassDictMixin):
         class Label(DataClassDictMixin):
             """Label
             """        
+
             # Single label
             single: Optional[str] = None
 
@@ -41,8 +42,9 @@ class ImageAnnotations(DataClassDictMixin):
         @dataclass
         class Bbox(DataClassDictMixin):
             """Bounding box
-            """        
-            # Bounding box
+            """ 
+
+            # Bounding box in [xlower,ylower,xupper,yupper] format
             xyxy: List[Union[float,int]]
 
             # Label
@@ -80,3 +82,10 @@ class ImageAnnotations(DataClassDictMixin):
 
     # Image name to annotation
     image_to_entry: Dict[str,Annotation]
+
+
+    @classmethod
+    def new(cls):
+        """Create a new empty annotation
+        """
+        return cls(image_to_entry={})
