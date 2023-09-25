@@ -50,7 +50,7 @@ class Conf(DataClassDictMixin):
         pass
 
 
-if __name__ == "__main__":
+def cli():
 
     parser = argparse.ArgumentParser(description="Command line utility to launch a simple dash app to annotate images")
     parser.add_argument("conf", type=str, help="Path to the configuration file YAML file. See docs for details on the format.")

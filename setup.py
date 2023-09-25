@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="dash_annotate_cv",
-    version="0.1.6",
+    version="0.1.7",
     author="Oliver K. Ernst",
     description="A Python library for computer vision annotation tasks using Dash",
     long_description=long_description,
@@ -30,5 +30,7 @@ setup(
         "scikit-image"
     ],
     python_requires=">=3.6",
-    scripts=['bin/dacv']
+    entry_points = {
+        'console_scripts': ['dacv=dash_annotate_cv.command_line:cli'],
+    }
 )
