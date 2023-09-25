@@ -6,12 +6,12 @@
 
 Supported tasks:
 * Annotation of images (whole image labels)
-
-Roadmap for future tasks:
 * Annotating multiple labels per image
 * Annotating bounding boxes
-* Annotating videos
-* Annotating tags
+
+Roadmap for future tasks:
+* Annotating video events
+* Annotating video tags
 
 **Note**: this library is not meant for production usage. It is meant to be used for quick prototyping and testing of annotation tasks.
 
