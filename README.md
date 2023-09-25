@@ -37,16 +37,69 @@ Roadmap for future tasks:
     pip install -e .
     ```
 
-3. Run the example.
+3. Run the example as described next.
 
-    ```bash
-    cd examples
-    python example.py
-    ```
+## Examples
 
-## Example
+The app can be launched in two ways:
+1. A simple command line utility lets you get up and running quickly.
+2. The app can be launched by writing a short Python script, which lets you use the annotation components in a flexible way in your own Dash app. 
 
-You can also check out the [examples](examples).
+Each is described here briefly. You can also check out the [examples](examples).
+
+### Command line utility
+
+To get started labeling immediately, you can use a simple command line utility. You just need to write a config YAML file. You can see the [examples](examples) directory for more examples - as simple example is as follows:
+
+```yaml
+# Annotation mode
+# image_labels = Annotate images with whole-image labels
+mode: image_labels
+
+# Label source
+label_source:
+  labels:
+  - astronaut
+  - camera
+  - cat
+
+# Image source
+image_source:
+
+  # Image source type
+  source_type: list_of_files
+
+  # List of files
+  list_of_files:
+  - ex_chelsea.jpg
+  - ex_astronaut.jpg
+  - ex_camera.jpg
+
+# Storage (optional)
+storage:
+  storage_type: json
+  json_file: example.json
+
+# Options (optional)
+options_image_labels:
+
+  # How many labels can be selected per image
+  selection_mode: single
+```
+
+To launch the app, simply run:
+
+```bash
+dacv conf.yml
+```
+
+Navigate to the default address `http://127.0.0.1:8050/` in your browser to use the app.
+
+Use `dacv -h` for a complete list of options. Or check out the [examples](examples) directory for more examples.
+
+### Python
+
+You can use the library in your own Dash app. This is recommended as a more flexible way to create your own annotation interface. The following example shows how to use the library to annotate images with labels.
 
 ```python
 # Import the library
@@ -75,7 +128,7 @@ app.layout = dbc.Container([
 app.run(debug=True)
 ```
 
-The result is shown in the gif above.
+The result is shown in the gif above. Check out the [examples](examples) directory for more examples.
 
 ### Loading the annotations & format
 
@@ -90,5 +143,7 @@ See the `ImageAnnotations` class for more information on the format.
 
 ## Dev
 
-[All-in-one components for Dash](https://dash.plotly.com/all-in-one-components)
-[Image annotation in Dash](https://dash.plotly.com/annotations)
+Some useful references:
+
+* [All-in-one components for Dash](https://dash.plotly.com/all-in-one-components)
+* [Image annotation in Dash](https://dash.plotly.com/annotations)
