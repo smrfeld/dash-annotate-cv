@@ -2,6 +2,12 @@ from typing import List, Optional, Dict, Union
 from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
+import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+Xyxy = List[Union[float,int]]
 
 @dataclass
 class ImageAnnotations(DataClassDictMixin):
@@ -45,7 +51,7 @@ class ImageAnnotations(DataClassDictMixin):
             """ 
 
             # Bounding box in [xlower,ylower,xupper,yupper] format
-            xyxy: List[Union[float,int]]
+            xyxy: Xyxy
 
             # Label
             class_name: Optional[str] = None
@@ -76,7 +82,37 @@ class ImageAnnotations(DataClassDictMixin):
 
         # History
         history: Optional[List[Union[Label,Bbox]]] = None
-        
+
+        def get_or_add_bbox(self, 
+            xyxy: Xyxy, 
+            class_name: Optional[str], 
+            author: Optional[str] = None, 
+            store_timestamps: bool = False, 
+            store_history: bool = False
+            ) -> Bbox:
+            candidates = [bbox for bbox in self.bboxs or [] if tuple(bbox.xyxy) == tuple(xyxy) and bbox.class_name == class_name]
+            if len(candidates) >= 1:
+                bbox_obj = candidates[0]
+            else:
+                # Create new bbox
+                bbox_obj = ImageAnnotations.Annotation.Bbox(
+                    xyxy=xyxy,
+                    class_name=class_name,
+                    timestamp=datetime.datetime.now().timestamp() if store_timestamps else None,
+                    author=author
+                    )
+                self.bboxs = (self.bboxs or []) + [bbox_obj]
+
+            return bbox_obj
+
+        def remove_all_other_bboxs(self, bboxs: List[Xyxy]):
+            idxs_remove = []
+            for i,bbox in enumerate(self.bboxs or []):
+                if bbox.xyxy not in bboxs:
+                    idxs_remove.append(i)
+            logger.debug(f"Removing {len(idxs_remove)} bboxs of current {len(self.bboxs or [])} which are not in the specified {len(bboxs)} bboxs")
+            self.bboxs = [bbox for i,bbox in enumerate(self.bboxs or []) if i not in idxs_remove]
+
         class Config(BaseConfig):
             omit_none = True
 
@@ -89,3 +125,17 @@ class ImageAnnotations(DataClassDictMixin):
         """Create a new empty annotation
         """
         return cls(image_to_entry={})
+
+
+    def get_or_add_image(self, image_name: str, with_bboxs: bool) -> Annotation:
+        if image_name in self.image_to_entry:
+            ann = self.image_to_entry[image_name]
+            if ann.bboxs is None:
+                ann.bboxs = []
+        else:
+            ann = ImageAnnotations.Annotation(
+                image_name=image_name,
+                bboxs=[]
+                )
+            self.image_to_entry[image_name] = ann
+        return ann

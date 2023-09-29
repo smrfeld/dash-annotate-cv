@@ -1,4 +1,4 @@
-from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist, Bbox
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -12,7 +12,7 @@ from skimage import data
 import json
 from dash import Output, Input, html, dcc, callback, MATCH
 import uuid
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
@@ -92,10 +92,9 @@ class AnnotateImageBboxsAIO(html.Div):
             dbc.Col([
                 html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
             ], md=6),
-            dbc.Col([
-            ], md=6, id=self.ids.description(aio_id))
+            dbc.Col(html.Div("No bboxs", id=self.ids.description(aio_id)), md=6)
         ])
-
+    
     def _create_layout_for_curr_image(self):
         """Create layout for the image
         """        
@@ -107,6 +106,22 @@ class AnnotateImageBboxsAIO(html.Div):
         fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
         return dcc.Graph(id=self.ids.graph_picture(self.aio_id), figure=fig)
     
+    def _create_bbox_layout(self):
+        if self.controller.curr is None:
+            logger.debug("Creating bbox layout - no curr image")
+            return no_update
+        
+        if self.controller.curr.bboxs is None:
+            logger.debug("Creating bbox layout - no bboxs")
+            bbox_list_group = []
+        else:
+            logger.debug(f"Creating bbox layout - %d bboxs: {len(self.controller.curr.bboxs)}")
+            bbox_list_group = [
+                dbc.ListGroupItem(",".join([str(int(x)) for x in bbox.xyxy]))
+                for bbox in self.controller.curr.bboxs
+                ]
+        return dbc.ListGroup(bbox_list_group)
+
     def _define_callbacks(self):
         """Define callbacks
         """        
@@ -115,12 +130,36 @@ class AnnotateImageBboxsAIO(html.Div):
             Output(self.ids.description(MATCH), 'children'),
             Input(self.ids.graph_picture(MATCH), "relayoutData")
             )
-        def update_bboxs(relayout_data):
-            logger.debug("Updating bboxs")
+        def update(relayout_data):
+            logger.debug(f"Updating bboxs: {relayout_data}")
 
-            if "shapes" in relayout_data:
-                return json.dumps(relayout_data["shapes"], indent=2)
+            if relayout_data is not None and "shapes" in relayout_data:
+                # A new box was drawn
+                # We receive all boxes from the data
+                self._handle_relayout_new_box_drawn(relayout_data)
+                return self._create_bbox_layout()
+            elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
+                # A box was updated
+                self._handle_relaxout_box_updated(relayout_data)
+                return self._create_bbox_layout()
             else:
                 return no_update
-        
+                
         logger.debug("Defined callbacks")
+
+    def _handle_relayout_new_box_drawn(self, relayout_data: Dict):
+        logger.debug("Handling new box drawn - all bboxs currently:")
+        bboxs = []
+        for bbox in relayout_data["shapes"]:
+            xyxy: List[float] = [ bbox[c] for c in ["x0","y0","x1","y1"] ]
+            logger.debug(f"\t{xyxy}")
+            bboxs.append(Bbox(xyxy, None))
+        self.controller.set_bboxs(bboxs)
+
+    def _handle_relaxout_box_updated(self, relayout_data: Dict):
+        # Parse shapes[0].x1 -> 0 from the brackets
+        label = list(relayout_data.keys())[0]
+        box_idx = int(label.split(".")[0].replace("shapes[","").replace("]",""))
+        shapes_label = "shapes[%d]" % box_idx
+        xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
+        self.controller.update_bbox(box_idx, xyxy)
