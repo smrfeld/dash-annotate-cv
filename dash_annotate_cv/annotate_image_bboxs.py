@@ -44,6 +44,11 @@ class AnnotateImageBboxsAIO(html.Div):
             'subcomponent': 'graph_picture',
             'aio_id': aio_id
         }
+        select_bbox = lambda aio_id: {
+            'component': 'AnnotateImageBboxsAIO',
+            'subcomponent': 'select_bbox',
+            'aio_id': aio_id
+        }
 
     ids = ids
 
@@ -117,10 +122,29 @@ class AnnotateImageBboxsAIO(html.Div):
         else:
             logger.debug(f"Creating bbox layout - %d bboxs: {len(self.controller.curr.bboxs)}")
             bbox_list_group = [
-                dbc.ListGroupItem(",".join([str(int(x)) for x in bbox.xyxy]))
+                self._create_list_group_for_bbox_layout(bbox)
                 for bbox in self.controller.curr.bboxs
                 ]
         return dbc.ListGroup(bbox_list_group)
+
+    def _create_list_group_for_bbox_layout(self, bbox: Bbox):
+        xyxy_label = ",".join([str(int(x)) for x in bbox.xyxy])
+        dropdown = dcc.Dropdown(
+            self.controller.labels, 
+            value=bbox.class_name, 
+            # id=self.ids.dropdown(aio_id), 
+            # style=style_dropdown,
+            #multi=self.selection_mode == SelectionMode.MULTIPLE
+            )
+
+        return dbc.ListGroupItem([
+            dbc.Row([
+                dbc.Col(xyxy_label, width=3),
+                dbc.Col(dropdown, width=3),
+                dbc.Col(dbc.Button("Select", id=self.ids.select_bbox(self.aio_id), color="danger", size="sm", className="mr-1"), width=3),
+                dbc.Col(dbc.Button("Delete", color="danger", size="sm", className="mr-1"), width=3)
+                ])
+            ])
 
     def _define_callbacks(self):
         """Define callbacks
