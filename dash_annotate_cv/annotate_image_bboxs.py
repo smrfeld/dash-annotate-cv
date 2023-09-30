@@ -1,4 +1,4 @@
-from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist, Bbox
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist, Bbox, BboxUpdate
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -7,7 +7,7 @@ from dash_annotate_cv.annotation_storage import AnnotationStorage
 
 from typing import Optional
 import plotly.express as px
-from dash import Dash, dcc, html, Input, Output, no_update, callback
+from dash import Dash, dcc, html, Input, Output, no_update, callback, State
 from skimage import data
 import json
 from dash import Output, Input, html, dcc, callback, MATCH
@@ -18,6 +18,8 @@ import dash_bootstrap_components as dbc
 from PIL import Image
 from dataclasses import dataclass
 import logging
+import plotly.graph_objects as go
+import dash 
 
 
 logger = logging.getLogger(__name__)
@@ -94,6 +96,7 @@ class AnnotateImageBboxsAIO(html.Div):
         self._curr_image_layout = self._create_layout_for_curr_image()  
 
         return dbc.Row([
+            dbc.Col(dbc.Button("Delete", id="reset-all", color="danger", size="sm", className="mr-1"), width=3),
             dbc.Col([
                 html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
             ], md=6),
@@ -152,38 +155,90 @@ class AnnotateImageBboxsAIO(html.Div):
         logger.debug("Defining callbacks")
         @callback(
             Output(self.ids.description(MATCH), 'children'),
-            Input(self.ids.graph_picture(MATCH), "relayoutData")
+            Output(self.ids.graph_picture(MATCH), "figure"),
+            Input(self.ids.graph_picture(MATCH), "relayoutData"),
+            Input("reset-all", "n_clicks"),
+            State(self.ids.graph_picture(MATCH), "figure")
             )
-        def update(relayout_data):
+        def update(relayout_data, n_clicks, figure):
             logger.debug(f"Updating bboxs: {relayout_data}")
 
-            if relayout_data is not None and "shapes" in relayout_data:
-                # A new box was drawn
-                # We receive all boxes from the data
-                self._handle_relayout_new_box_drawn(relayout_data)
-                return self._create_bbox_layout()
-            elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
-                # A box was updated
-                self._handle_relaxout_box_updated(relayout_data)
-                return self._create_bbox_layout()
+            trigger_id = get_trigger_id()
+            if trigger_id == "reset-all":
+                logger.debug("Pressed reset-all")
+                figure['layout']['shapes'] = []
+                return no_update, figure
             else:
-                return no_update
+                if relayout_data is not None and "shapes" in relayout_data:
+                    # A new box was drawn
+                    # We receive all boxes from the data
+                    self._handle_relayout_new_box_drawn(relayout_data)
+                    return self._create_bbox_layout(), no_update
+                elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
+                    # A box was updated
+                    self._handle_relaxout_box_updated(relayout_data)
+                    # logger.debug(f"Prior layout shapes: {figure['layout']['shapes']}")
+                    # figure['layout']['shapes'] = [self._new_shape()]
+                    # logger.debug(f"New layout shapes: {figure['layout']['shapes']}")
+                    return self._create_bbox_layout(), figure
+                else:
+                    return no_update, no_update
                 
         logger.debug("Defined callbacks")
 
     def _handle_relayout_new_box_drawn(self, relayout_data: Dict):
-        logger.debug("Handling new box drawn - all bboxs currently:")
-        bboxs = []
-        for bbox in relayout_data["shapes"]:
-            xyxy: List[float] = [ bbox[c] for c in ["x0","y0","x1","y1"] ]
-            logger.debug(f"\t{xyxy}")
-            bboxs.append(Bbox(xyxy, None))
-        self.controller.set_bboxs(bboxs)
+        bboxs_new = self._relayout_data_to_bboxs(relayout_data)
+        self.controller.set_bboxs(bboxs_new)
 
     def _handle_relaxout_box_updated(self, relayout_data: Dict):
+        update = self._relayout_data_to_bbox_update(relayout_data)
+        self.controller.update_bbox(update)
+
+    def _curr_bboxs(self) -> List[Bbox]:
+        if self.controller.curr is None:
+            return []
+        return self.controller.curr.bboxs or []
+
+    def _shape_to_bbox(self, shape: Dict) -> Bbox:
+        xyxy: List[float] = [ shape[c] for c in ["x0","y0","x1","y1"] ]
+        return Bbox(xyxy, None)
+
+    def _relayout_data_to_bboxs(self, relayout_data: Dict) -> List[Bbox]:
+        return [ self._shape_to_bbox(bbox) for bbox in relayout_data["shapes"] ]
+
+    def _relayout_data_to_bbox_update(self, relayout_data: Dict) -> BboxUpdate:
         # Parse shapes[0].x1 -> 0 from the brackets
         label = list(relayout_data.keys())[0]
         box_idx = int(label.split(".")[0].replace("shapes[","").replace("]",""))
         shapes_label = "shapes[%d]" % box_idx
         xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
-        self.controller.update_bbox(box_idx, xyxy)
+        return BboxUpdate(box_idx, xyxy)
+
+    def _bbox_to_shape(self, bbox: Bbox) -> Dict:
+        return {
+            'editable': True, 
+            'visible': True, 
+            'showlegend': False, 
+            'legend': 'legend', 
+            'legendgroup': '', 
+            'legendgrouptitle': {'text': ''}, 
+            'legendrank': 1000, 
+            'label': {'text': '', 'texttemplate': ''}, 
+            'xref': 'x', 
+            'yref': 'y', 
+            'layer': 'above', 
+            'opacity': 1, 
+            'line': {'color': '#444', 'width': 4, 'dash': 'solid'}, 
+            'fillcolor': 'rgba(0,0,0,0)', 
+            'fillrule': 'evenodd', 
+            'type': 
+            'rect', 
+            'x0': bbox.xyxy[0], 
+            'y0': bbox.xyxy[1], 
+            'x1': bbox.xyxy[2], 
+            'y1': bbox.xyxy[3]
+            }
+
+    def _bboxs_to_shapes(self, bboxs: List[Bbox]) -> List[Dict]:
+        return [ self._bbox_to_shape(bbox) for bbox in bboxs ]
+        

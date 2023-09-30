@@ -24,6 +24,13 @@ class Bbox:
     def __repr__(self):
         return f"Bbox(xyxy={[int(x) for x in self.xyxy]}, class_name={self.class_name})"
 
+
+@dataclass
+class BboxUpdate:
+    idx: int
+    xyxy_new: List[float]
+
+
 @dataclass
 class ImageAnn:
     image_idx: int
@@ -174,22 +181,22 @@ class AnnotateImageController:
         # Refresh
         self._refresh_curr()
 
-    def update_bbox(self, bbox_idx: int, xyxy: List[float]):
+    def update_bbox(self, update: BboxUpdate):
 
         if self._curr is None:
             raise NoCurrLabelError("No current label")
 
         # Update curr
         assert self._curr.bboxs is not None, "Bboxs must be set"
-        assert bbox_idx < len(self._curr.bboxs), "Bbox idx must be less than number of bboxs"
-        self._curr.bboxs[bbox_idx].xyxy = xyxy
+        assert update.idx < len(self._curr.bboxs), "Bbox idx must be less than number of bboxs"
+        self._curr.bboxs[update.idx].xyxy = update.xyxy_new
 
         # Store the annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
 
         # Update the bbox
         assert ann.bboxs is not None, "Bboxs must be set"
-        ann.bboxs[bbox_idx].xyxy = xyxy
+        ann.bboxs[update.idx].xyxy = update.xyxy_new
 
         # Write
         self.annotation_writer.write(self.annotations)
