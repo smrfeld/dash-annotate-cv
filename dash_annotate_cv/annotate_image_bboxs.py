@@ -46,14 +46,16 @@ class AnnotateImageBboxsAIO(html.Div):
             'subcomponent': 'graph_picture',
             'aio_id': aio_id
         }
-        select_bbox = lambda aio_id: {
+        highlight_bbox = lambda aio_id, idx: {
             'component': 'AnnotateImageBboxsAIO',
-            'subcomponent': 'select_bbox',
-            'aio_id': aio_id
+            'subcomponent': 'highlight_bbox',
+            'aio_id': aio_id,
+            'idx': idx
         }
-        delete_button = lambda idx: {
+        delete_button = lambda aio_id, idx: {
             'component': 'AnnotateImageBboxsAIO',
             'subcomponent': 'delete_button',
+            'aio_id': aio_id,
             'idx': idx
         }
 
@@ -114,7 +116,10 @@ class AnnotateImageBboxsAIO(html.Div):
         if image is None:
             return []
         fig = px.imshow(image)
-        fig.update_layout(dragmode="drawrect")
+        fig.update_layout(
+            dragmode="drawrect",
+            clickmode='event+select'
+            )
         fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
         return dcc.Graph(id=self.ids.graph_picture(self.aio_id), figure=fig)
     
@@ -149,15 +154,22 @@ class AnnotateImageBboxsAIO(html.Div):
             color="danger", 
             size="sm", 
             className="mr-1",
-            # id={"type": "city-filter-dropdown", "index": bbox_idx},
-            id=self.ids.delete_button(bbox_idx)
+            id=self.ids.delete_button(self.aio_id, bbox_idx)
+            )
+
+        button_highlight = dbc.Button(
+            "Highlight", 
+            color="primary", 
+            size="sm", 
+            className="mr-1",
+            id=self.ids.highlight_bbox(self.aio_id, bbox_idx)
             )
 
         return dbc.ListGroupItem([
             dbc.Row([
                 dbc.Col(xyxy_label, width=3),
                 dbc.Col(dropdown, width=3),
-                dbc.Col(dbc.Button("Select", id=self.ids.select_bbox(self.aio_id), color="danger", size="sm", className="mr-1"), width=3),
+                dbc.Col(button_highlight, width=3),
                 dbc.Col(button_delete, width=3)
                 ])
             ])
@@ -170,22 +182,38 @@ class AnnotateImageBboxsAIO(html.Div):
             Output(self.ids.description(MATCH), 'children'),
             Output(self.ids.graph_picture(MATCH), "figure"),
             Input(self.ids.graph_picture(MATCH), "relayoutData"),
-            Input(self.ids.delete_button(ALL), "n_clicks"),
-            # Input({"type": "city-filter-dropdown", "index": ALL}, "n_clicks"),
+            Input(self.ids.graph_picture(MATCH), "selectedData"),
+            Input(self.ids.delete_button(MATCH, ALL), "n_clicks"),
+            Input(self.ids.highlight_bbox(MATCH, ALL), "n_clicks"),
             State(self.ids.graph_picture(MATCH), "figure")
             )
-        def update(relayout_data, n_clicks, figure):
-            logger.debug(f"Updating bboxs: {relayout_data}")
+        def update(relayout_data, click_data, n_clicks_delete, n_clicks_select, figure):
 
             trigger_id, idx = get_trigger_id()
-            logger.debug(f"Trigger ID: {trigger_id} idx: {idx}")
+            logger.debug(f"Update: trigger ID: {trigger_id} idx: {idx}")
+
             if trigger_id == "delete_button":
                 logger.debug("Pressed delete_button")
                 assert idx is not None, "idx should not be None"
                 self._handle_delete_button_pressed(idx)
                 figure['layout']['shapes'] = self._create_curr_figure_shapes()
                 return self._create_bbox_layout(), figure
-            else:
+
+            elif trigger_id == "highlight_bbox":
+                logger.debug("Pressed highlight_bbox")
+                assert idx is not None, "idx should not be None"
+                shape = figure['layout']['shapes'][idx]
+                logger.debug(shape)
+                if shape['fillcolor'] in ['rgba(0,0,0,0)','rgba(0, 0, 0, 0)']:
+                    shape['fillcolor'] = 'rgba(255,0,0,0.2)'
+                    shape['line']['color'] = 'rgba(255,0,0,1)'
+                else:
+                    shape['fillcolor'] = 'rgba(0,0,0,0)'
+                    shape['line']['color'] = '#444'
+                return no_update, figure
+            elif trigger_id == "graph_picture":
+                logger.debug(f"click_data: {click_data}")
+
                 if relayout_data is not None and "shapes" in relayout_data:
                     # A new box was drawn
                     # We receive all boxes from the data
@@ -197,6 +225,9 @@ class AnnotateImageBboxsAIO(html.Div):
                     return self._create_bbox_layout(), no_update
                 else:
                     return no_update, no_update
+            else:
+                logger.warning(f"Unrecognized trigger ID: {trigger_id}")
+                return no_update, no_update
                 
         logger.debug("Defined callbacks")
 
