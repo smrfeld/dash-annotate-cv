@@ -4,13 +4,14 @@ from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAbove
 from dash_annotate_cv.label_source import LabelSource
 
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 from PIL import Image
 from mashumaro import DataClassDictMixin
 import os
 import datetime
 import json
 import logging
+import random
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,8 @@ class Bbox:
 @dataclass
 class BboxUpdate:
     idx: int
-    xyxy_new: List[float]
+    xyxy_new: Optional[List[float]]
+    class_name_new: Optional[str]
 
 
 @dataclass
@@ -61,6 +63,25 @@ class AnnotateImageOptions(DataClassDictMixin):
     # Name of author to store
     author: Optional[str] = None
 
+    # Class to color
+    class_to_color: Optional[Dict[str,Tuple[int,int,int]]] = None
+
+    def check_valid(self):
+        if self.class_to_color is not None:
+            assert isinstance(self.class_to_color, dict), "class_to_color must be a dict"
+            for k,v in self.class_to_color.items():
+                assert isinstance(k,str), "class_to_color keys must be strings"
+                assert isinstance(v,tuple), "class_to_color values must be tuples"
+                assert len(v) == 3, "class_to_color values must be tuples of length 3"
+
+    def get_assign_color_for_class(self, class_name: str) -> Tuple[int,int,int]:
+        if self.class_to_color is None:
+            self.class_to_color = {}
+        if not class_name in self.class_to_color:
+            # Random
+            self.class_to_color[class_name] = (int(255*random.random()),int(255*random.random()),int(255*random.random()))
+            logger.debug(f"Assigned color {self.class_to_color[class_name]} to class {class_name}")
+        return self.class_to_color[class_name]
 
 
 class NoCurrLabelError(Exception):
@@ -198,13 +219,18 @@ class AnnotateImageController:
 
 
     def update_bbox(self, update: BboxUpdate):
+        if update.xyxy_new is None and update.class_name_new is None:
+            return
 
         # Store the annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
 
         # Update the bbox
         assert ann.bboxs is not None, "Bboxs must be set"
-        ann.bboxs[update.idx].xyxy = update.xyxy_new
+        if update.xyxy_new is not None:
+            ann.bboxs[update.idx].xyxy = update.xyxy_new
+        if update.class_name_new is not None:
+            ann.bboxs[update.idx].class_name = update.class_name_new
 
         # Write
         self.annotation_writer.write(self.annotations)

@@ -58,6 +58,12 @@ class AnnotateImageBboxsAIO(html.Div):
             'aio_id': aio_id,
             'idx': idx
         }
+        dropdown = lambda aio_id, idx: {
+            'component': 'AnnotateImageBboxsAIO',
+            'subcomponent': 'dropdown',
+            'aio_id': aio_id,
+            'idx': idx
+        }
 
     ids = ids
 
@@ -70,6 +76,7 @@ class AnnotateImageBboxsAIO(html.Div):
         options: AnnotateImageOptions = AnnotateImageOptions()
         ):
 
+        self.options = options
         self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
@@ -144,9 +151,9 @@ class AnnotateImageBboxsAIO(html.Div):
         dropdown = dcc.Dropdown(
             self.controller.labels, 
             value=bbox.class_name, 
-            # id=self.ids.dropdown(aio_id), 
+            id=self.ids.dropdown(self.aio_id, bbox_idx), 
             # style=style_dropdown,
-            #multi=self.selection_mode == SelectionMode.MULTIPLE
+            # multi=self.selection_mode == SelectionMode.MULTIPLE
             )
 
         button_delete = dbc.Button(
@@ -167,10 +174,10 @@ class AnnotateImageBboxsAIO(html.Div):
 
         return dbc.ListGroupItem([
             dbc.Row([
-                dbc.Col(xyxy_label, width=3),
-                dbc.Col(dropdown, width=3),
-                dbc.Col(button_highlight, width=3),
-                dbc.Col(button_delete, width=3)
+                dbc.Col(xyxy_label, lg=3, md=6),
+                dbc.Col(dropdown, lg=3, md=6),
+                dbc.Col(button_highlight, lg=3, md=6),
+                dbc.Col(button_delete, lg=3, md=6)
                 ])
             ])
 
@@ -185,9 +192,10 @@ class AnnotateImageBboxsAIO(html.Div):
             Input(self.ids.graph_picture(MATCH), "selectedData"),
             Input(self.ids.delete_button(MATCH, ALL), "n_clicks"),
             Input(self.ids.highlight_bbox(MATCH, ALL), "n_clicks"),
+            Input(self.ids.dropdown(MATCH, ALL), "value"),
             State(self.ids.graph_picture(MATCH), "figure")
             )
-        def update(relayout_data, click_data, n_clicks_delete, n_clicks_select, figure):
+        def update(relayout_data, click_data, n_clicks_delete, n_clicks_select, dropdown_value, figure):
 
             trigger_id, idx = get_trigger_id()
             logger.debug(f"Update: trigger ID: {trigger_id} idx: {idx}")
@@ -211,6 +219,16 @@ class AnnotateImageBboxsAIO(html.Div):
                     shape['fillcolor'] = 'rgba(0,0,0,0)'
                     shape['line']['color'] = '#444'
                 return no_update, figure
+
+            elif trigger_id == "dropdown":
+                logger.debug("Changed dropdown")
+                assert idx is not None, "idx should not be None"
+
+                # Change the value
+                self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value[0]))
+                figure['layout']['shapes'][idx] = self._bbox_to_shape(self._curr_bboxs[idx])
+                return no_update, figure
+
             elif trigger_id == "graph_picture":
                 logger.debug(f"click_data: {click_data}")
 
@@ -232,7 +250,7 @@ class AnnotateImageBboxsAIO(html.Div):
         logger.debug("Defined callbacks")
 
     def _create_curr_figure_shapes(self) -> List:
-        return self._bboxs_to_shapes(self._curr_bboxs())
+        return self._bboxs_to_shapes(self._curr_bboxs)
 
     def _handle_delete_button_pressed(self, idx: int):
         logger.debug(f"Deleting bbox idx: {idx}")
@@ -246,6 +264,7 @@ class AnnotateImageBboxsAIO(html.Div):
         update = self._relayout_data_to_bbox_update(relayout_data)
         self.controller.update_bbox(update)
 
+    @property
     def _curr_bboxs(self) -> List[Bbox]:
         if self.controller.curr is None:
             return []
@@ -264,9 +283,15 @@ class AnnotateImageBboxsAIO(html.Div):
         box_idx = int(label.split(".")[0].replace("shapes[","").replace("]",""))
         shapes_label = "shapes[%d]" % box_idx
         xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
-        return BboxUpdate(box_idx, xyxy)
+        return BboxUpdate(box_idx, xyxy, None)
 
     def _bbox_to_shape(self, bbox: Bbox) -> Dict:
+        if bbox.class_name is None:
+            line_color = '#444'
+        else:
+            rgb = self.options.get_assign_color_for_class(bbox.class_name)
+            line_color = 'rgba(%d,%d,%d,1)' % rgb
+
         return {
             'editable': True, 
             'visible': True, 
@@ -280,7 +305,7 @@ class AnnotateImageBboxsAIO(html.Div):
             'yref': 'y', 
             'layer': 'above', 
             'opacity': 1, 
-            'line': {'color': '#444', 'width': 4, 'dash': 'solid'}, 
+            'line': {'color': line_color, 'width': 4, 'dash': 'solid'}, 
             'fillcolor': 'rgba(0,0,0,0)', 
             'fillrule': 'evenodd', 
             'type': 
