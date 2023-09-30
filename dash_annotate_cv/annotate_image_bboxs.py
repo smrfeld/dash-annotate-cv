@@ -10,7 +10,7 @@ import plotly.express as px
 from dash import Dash, dcc, html, Input, Output, no_update, callback, State
 from skimage import data
 import json
-from dash import Output, Input, html, dcc, callback, MATCH
+from dash import Output, Input, html, dcc, callback, MATCH, ALL
 import uuid
 from typing import Optional, Union, List, Dict
 import plotly.express as px
@@ -50,6 +50,11 @@ class AnnotateImageBboxsAIO(html.Div):
             'component': 'AnnotateImageBboxsAIO',
             'subcomponent': 'select_bbox',
             'aio_id': aio_id
+        }
+        delete_button = lambda idx: {
+            'component': 'AnnotateImageBboxsAIO',
+            'subcomponent': 'delete_button',
+            'idx': idx
         }
 
     ids = ids
@@ -96,7 +101,6 @@ class AnnotateImageBboxsAIO(html.Div):
         self._curr_image_layout = self._create_layout_for_curr_image()  
 
         return dbc.Row([
-            dbc.Col(dbc.Button("Delete", id="reset-all", color="danger", size="sm", className="mr-1"), width=3),
             dbc.Col([
                 html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
             ], md=6),
@@ -123,14 +127,14 @@ class AnnotateImageBboxsAIO(html.Div):
             logger.debug("Creating bbox layout - no bboxs")
             bbox_list_group = []
         else:
-            logger.debug(f"Creating bbox layout - %d bboxs: {len(self.controller.curr.bboxs)}")
+            logger.debug(f"Creating bbox layout - num bboxs: {len(self.controller.curr.bboxs)}")
             bbox_list_group = [
-                self._create_list_group_for_bbox_layout(bbox)
-                for bbox in self.controller.curr.bboxs
+                self._create_list_group_for_bbox_layout(bbox,idx)
+                for idx,bbox in enumerate(self.controller.curr.bboxs)
                 ]
         return dbc.ListGroup(bbox_list_group)
 
-    def _create_list_group_for_bbox_layout(self, bbox: Bbox):
+    def _create_list_group_for_bbox_layout(self, bbox: Bbox, bbox_idx: int):
         xyxy_label = ",".join([str(int(x)) for x in bbox.xyxy])
         dropdown = dcc.Dropdown(
             self.controller.labels, 
@@ -140,12 +144,21 @@ class AnnotateImageBboxsAIO(html.Div):
             #multi=self.selection_mode == SelectionMode.MULTIPLE
             )
 
+        button_delete = dbc.Button(
+            "Delete", 
+            color="danger", 
+            size="sm", 
+            className="mr-1",
+            # id={"type": "city-filter-dropdown", "index": bbox_idx},
+            id=self.ids.delete_button(bbox_idx)
+            )
+
         return dbc.ListGroupItem([
             dbc.Row([
                 dbc.Col(xyxy_label, width=3),
                 dbc.Col(dropdown, width=3),
                 dbc.Col(dbc.Button("Select", id=self.ids.select_bbox(self.aio_id), color="danger", size="sm", className="mr-1"), width=3),
-                dbc.Col(dbc.Button("Delete", color="danger", size="sm", className="mr-1"), width=3)
+                dbc.Col(button_delete, width=3)
                 ])
             ])
 
@@ -157,17 +170,21 @@ class AnnotateImageBboxsAIO(html.Div):
             Output(self.ids.description(MATCH), 'children'),
             Output(self.ids.graph_picture(MATCH), "figure"),
             Input(self.ids.graph_picture(MATCH), "relayoutData"),
-            Input("reset-all", "n_clicks"),
+            Input(self.ids.delete_button(ALL), "n_clicks"),
+            # Input({"type": "city-filter-dropdown", "index": ALL}, "n_clicks"),
             State(self.ids.graph_picture(MATCH), "figure")
             )
         def update(relayout_data, n_clicks, figure):
             logger.debug(f"Updating bboxs: {relayout_data}")
 
-            trigger_id = get_trigger_id()
-            if trigger_id == "reset-all":
-                logger.debug("Pressed reset-all")
-                figure['layout']['shapes'] = []
-                return no_update, figure
+            trigger_id, idx = get_trigger_id()
+            logger.debug(f"Trigger ID: {trigger_id} idx: {idx}")
+            if trigger_id == "delete_button":
+                logger.debug("Pressed delete_button")
+                assert idx is not None, "idx should not be None"
+                self._handle_delete_button_pressed(idx)
+                figure['layout']['shapes'] = self._create_curr_figure_shapes()
+                return self._create_bbox_layout(), figure
             else:
                 if relayout_data is not None and "shapes" in relayout_data:
                     # A new box was drawn
@@ -177,14 +194,18 @@ class AnnotateImageBboxsAIO(html.Div):
                 elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
                     # A box was updated
                     self._handle_relaxout_box_updated(relayout_data)
-                    # logger.debug(f"Prior layout shapes: {figure['layout']['shapes']}")
-                    # figure['layout']['shapes'] = [self._new_shape()]
-                    # logger.debug(f"New layout shapes: {figure['layout']['shapes']}")
-                    return self._create_bbox_layout(), figure
+                    return self._create_bbox_layout(), no_update
                 else:
                     return no_update, no_update
                 
         logger.debug("Defined callbacks")
+
+    def _create_curr_figure_shapes(self) -> List:
+        return self._bboxs_to_shapes(self._curr_bboxs())
+
+    def _handle_delete_button_pressed(self, idx: int):
+        logger.debug(f"Deleting bbox idx: {idx}")
+        self.controller.delete_bbox(idx)
 
     def _handle_relayout_new_box_drawn(self, relayout_data: Dict):
         bboxs_new = self._relayout_data_to_bboxs(relayout_data)

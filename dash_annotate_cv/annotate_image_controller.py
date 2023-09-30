@@ -181,15 +181,23 @@ class AnnotateImageController:
         # Refresh
         self._refresh_curr()
 
+
+    def delete_bbox(self, idx: int):
+
+        # Update annotation
+        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        assert ann.bboxs is not None, "Bboxs must be set"
+        assert idx < len(ann.bboxs), "Bbox idx must be less than number of bboxs"
+        del ann.bboxs[idx]
+        
+        # Write
+        self.annotation_writer.write(self.annotations)
+
+        # Refresh
+        self._refresh_curr()
+
+
     def update_bbox(self, update: BboxUpdate):
-
-        if self._curr is None:
-            raise NoCurrLabelError("No current label")
-
-        # Update curr
-        assert self._curr.bboxs is not None, "Bboxs must be set"
-        assert update.idx < len(self._curr.bboxs), "Bbox idx must be less than number of bboxs"
-        self._curr.bboxs[update.idx].xyxy = update.xyxy_new
 
         # Store the annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)

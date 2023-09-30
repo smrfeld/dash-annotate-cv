@@ -1,19 +1,29 @@
 import dash
 import json
 import logging
+from typing import Tuple, Optional
 
 
 logger = logging.getLogger(__name__)
 
 
-def get_trigger_id() -> str:
+def get_trigger_id() -> Tuple[str,Optional[int]]:
     """Get the trigger ID from the callback context
     """
     ctx = dash.callback_context
-    logger.debug(f"ctx.triggered: {ctx.triggered}")
+    
     # ctx.triggered = [{'prop_id': '<ID>.n_clicks', 'value': 1}]
     # Extract ID
+    logger.debug(f"ctx.triggered = {ctx.triggered}")
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    #if trigger_id != "":
-    #    trigger_id = json.loads(trigger_id)["subcomponent"]
-    return trigger_id
+    idx: Optional[int] = None
+
+    try:
+        # Possibly extract the subcomponent if AIO involved
+        if trigger_id != "":
+            data = json.loads(trigger_id)
+            trigger_id = data["subcomponent"]
+            idx = data["idx"]
+    except:
+        pass
+    return trigger_id, idx
