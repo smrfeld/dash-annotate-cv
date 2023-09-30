@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 class Bbox:
     xyxy: List[float]
     class_name: Optional[str]
+    is_highlighted: bool = False
 
     def __repr__(self):
         return f"Bbox(xyxy={[int(x) for x in self.xyxy]}, class_name={self.class_name})"
@@ -66,6 +67,9 @@ class AnnotateImageOptions(DataClassDictMixin):
     # Class to color
     class_to_color: Optional[Dict[str,Tuple[int,int,int]]] = None
 
+    # Default color
+    default_bbox_color: Tuple[int,int,int] = (68,68,68)
+
     def check_valid(self):
         if self.class_to_color is not None:
             assert isinstance(self.class_to_color, dict), "class_to_color must be a dict"
@@ -74,12 +78,19 @@ class AnnotateImageOptions(DataClassDictMixin):
                 assert isinstance(v,tuple), "class_to_color values must be tuples"
                 assert len(v) == 3, "class_to_color values must be tuples of length 3"
 
+    def _random_col(self) -> Tuple[int,int,int]:
+        # Don't allow too bright or too dark colors = hard to see
+        rgb = None
+        while rgb is None or sum(rgb) > 675 or sum(rgb) < 100:
+            rgb = (int(255*random.random()),int(255*random.random()),int(255*random.random()))
+        return rgb
+
     def get_assign_color_for_class(self, class_name: str) -> Tuple[int,int,int]:
         if self.class_to_color is None:
             self.class_to_color = {}
         if not class_name in self.class_to_color:
             # Random
-            self.class_to_color[class_name] = (int(255*random.random()),int(255*random.random()),int(255*random.random()))
+            self.class_to_color[class_name] = self._random_col()
             logger.debug(f"Assigned color {self.class_to_color[class_name]} to class {class_name}")
         return self.class_to_color[class_name]
 
@@ -219,8 +230,6 @@ class AnnotateImageController:
 
 
     def update_bbox(self, update: BboxUpdate):
-        if update.xyxy_new is None and update.class_name_new is None:
-            return
 
         # Store the annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
@@ -229,8 +238,9 @@ class AnnotateImageController:
         assert ann.bboxs is not None, "Bboxs must be set"
         if update.xyxy_new is not None:
             ann.bboxs[update.idx].xyxy = update.xyxy_new
-        if update.class_name_new is not None:
-            ann.bboxs[update.idx].class_name = update.class_name_new
+        
+        # Always update class_name, even if new value is None (None means cleared selection)
+        ann.bboxs[update.idx].class_name = update.class_name_new
 
         # Write
         self.annotation_writer.write(self.annotations)

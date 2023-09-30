@@ -172,10 +172,10 @@ class AnnotateImageBboxsAIO(html.Div):
 
         return dbc.ListGroupItem([
             dbc.Row([
-                dbc.Col(dropdown, lg=3, md=6),
-                dbc.Col(xyxy_label, lg=3, md=6),
-                dbc.Col(button_highlight, lg=3, md=6),
-                dbc.Col(button_delete, lg=3, md=6)
+                dbc.Col(dropdown, lg=4, md=6),
+                dbc.Col(xyxy_label, lg=4, md=6),
+                dbc.Col(button_highlight, lg=2, md=6),
+                dbc.Col(button_delete, lg=2, md=6)
                 ])
             ])
 
@@ -208,21 +208,13 @@ class AnnotateImageBboxsAIO(html.Div):
             elif trigger_id == "highlight_bbox":
                 logger.debug("Pressed highlight_bbox")
                 assert idx is not None, "idx should not be None"
-                shape = figure['layout']['shapes'][idx]
-                logger.debug(shape)
-                if shape['fillcolor'] in ['rgba(0,0,0,0)','rgba(0, 0, 0, 0)']:
-                    shape['fillcolor'] = 'rgba(255,0,0,0.3)'
-                    shape['line']['color'] = 'rgba(255,0,0,1)'
-                else:
-                    shape['fillcolor'] = 'rgba(0,0,0,0)'
-                    shape['line']['color'] = '#444'
+                self._curr_bboxs[idx].is_highlighted = not self._curr_bboxs[idx].is_highlighted
+                figure['layout']['shapes'][idx] = self._bbox_to_shape(self._curr_bboxs[idx])
                 return no_update, figure
 
             elif trigger_id == "dropdown":
-                logger.debug("Changed dropdown")
+                logger.debug(f"Changed dropdown to {dropdown_value}")
                 assert idx is not None, "idx should not be None"
-
-                # Change the value
                 self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value[0]))
                 figure['layout']['shapes'][idx] = self._bbox_to_shape(self._curr_bboxs[idx])
                 return no_update, figure
@@ -281,14 +273,27 @@ class AnnotateImageBboxsAIO(html.Div):
         box_idx = int(label.split(".")[0].replace("shapes[","").replace("]",""))
         shapes_label = "shapes[%d]" % box_idx
         xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
-        return BboxUpdate(box_idx, xyxy, None)
+
+        # Get current class name
+        class_name_curr = self._curr_bboxs[box_idx].class_name
+
+        return BboxUpdate(box_idx, xyxy, class_name_curr)
 
     def _bbox_to_shape(self, bbox: Bbox) -> Dict:
+        # Line color
         if bbox.class_name is None:
-            line_color = '#444'
+            rgb = self.options.default_bbox_color
+            if bbox.is_highlighted:
+                rgb = (255,0,0)
         else:
             rgb = self.options.get_assign_color_for_class(bbox.class_name)
-            line_color = 'rgba(%d,%d,%d,1)' % rgb
+        line_color = 'rgba(%d,%d,%d,1)' % rgb
+
+        # Fill color
+        if bbox.is_highlighted:
+            fill_color = 'rgba(%d,%d,%d,0.3)' % rgb
+        else:
+            fill_color = 'rgba(0,0,0,0)'
 
         return {
             'editable': True, 
@@ -304,7 +309,7 @@ class AnnotateImageBboxsAIO(html.Div):
             'layer': 'above', 
             'opacity': 1, 
             'line': {'color': line_color, 'width': 4, 'dash': 'solid'}, 
-            'fillcolor': 'rgba(0,0,0,0)', 
+            'fillcolor': fill_color, 
             'fillrule': 'evenodd', 
             'type': 
             'rect', 
