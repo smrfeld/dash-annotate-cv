@@ -176,12 +176,45 @@ class AnnotateImageController:
 
 
     @property
+    def curr_bboxs(self) -> List[Bbox]:
+        if self.curr is None:
+            return []
+        return self.curr.bboxs or []
+
+
+    @property
     def _curr_image_name(self) -> str:
         if self._curr is None:
             raise NoCurrLabelError("No current label")
         return os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
 
 
+    def add_bbox(self, bbox: Bbox):
+        logger.debug(f"Adding bbox: {bbox}")
+
+        # Store the annotation
+        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+
+        # Check labels are allowed
+        if bbox.class_name is not None and not bbox.class_name in self._labels:
+            raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
+
+        # Bounding box
+        ann.add_bbox(
+            xyxy=bbox.xyxy,
+            class_name=bbox.class_name,
+            author=self.options.author,
+            store_timestamps=self.options.store_timestamps,
+            store_history=self.options.store_history
+            )
+
+        # Write
+        self.annotation_writer.write(self.annotations)
+
+        # Refresh
+        self._refresh_curr()
+
+    '''
     def set_bboxs(self, bboxs: List[Bbox]):
         logger.debug(f"Setting {len(bboxs)} bboxs")
 
@@ -196,7 +229,7 @@ class AnnotateImageController:
                 raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
 
             # Bounding box
-            ann.get_or_add_bbox(
+            ann.add_bbox(
                 xyxy=bbox.xyxy,
                 class_name=bbox.class_name,
                 author=self.options.author,
@@ -212,7 +245,7 @@ class AnnotateImageController:
 
         # Refresh
         self._refresh_curr()
-
+    '''
 
     def delete_bbox(self, idx: int):
 

@@ -12,7 +12,7 @@ from skimage import data
 import json
 from dash import Output, Input, html, dcc, callback, MATCH, ALL
 import uuid
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
@@ -76,7 +76,6 @@ class AnnotateImageBboxsAIO(html.Div):
         options: AnnotateImageOptions = AnnotateImageOptions()
         ):
 
-        self.options = options
         self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
@@ -85,6 +84,7 @@ class AnnotateImageBboxsAIO(html.Div):
             options=options
             )
         self._curr_image_layout = None
+        self.converter = BboxToShapeConverter(options=options)
 
         # Allow developers to pass in their own `aio_id` if they're
         # binding their own callback to a particular component.
@@ -187,13 +187,12 @@ class AnnotateImageBboxsAIO(html.Div):
             Output(self.ids.description(MATCH), 'children'),
             Output(self.ids.graph_picture(MATCH), "figure"),
             Input(self.ids.graph_picture(MATCH), "relayoutData"),
-            Input(self.ids.graph_picture(MATCH), "selectedData"),
             Input(self.ids.delete_button(MATCH, ALL), "n_clicks"),
             Input(self.ids.highlight_bbox(MATCH, ALL), "n_clicks"),
             Input(self.ids.dropdown(MATCH, ALL), "value"),
             State(self.ids.graph_picture(MATCH), "figure")
             )
-        def update(relayout_data, click_data, n_clicks_delete, n_clicks_select, dropdown_value, figure):
+        def update(relayout_data, n_clicks_delete, n_clicks_select, dropdown_value, figure):
 
             trigger_id, idx = get_trigger_id()
             logger.debug(f"Update: trigger ID: {trigger_id} idx: {idx}")
@@ -201,37 +200,34 @@ class AnnotateImageBboxsAIO(html.Div):
             if trigger_id == "delete_button":
                 logger.debug("Pressed delete_button")
                 assert idx is not None, "idx should not be None"
-                self._handle_delete_button_pressed(idx)
-                figure['layout']['shapes'] = self._create_curr_figure_shapes()
-                return self._create_bbox_layout(), figure
+                update = self._handle_delete_button_pressed(idx, figure)
+                return update.bbox_layout, update.figure
 
             elif trigger_id == "highlight_bbox":
                 logger.debug("Pressed highlight_bbox")
                 assert idx is not None, "idx should not be None"
-                self._curr_bboxs[idx].is_highlighted = not self._curr_bboxs[idx].is_highlighted
-                figure['layout']['shapes'][idx] = self._bbox_to_shape(self._curr_bboxs[idx])
-                return no_update, figure
+                update = self._handle_highlight_button_pressed(idx, figure)
+                return update.bbox_layout, update.figure
 
             elif trigger_id == "dropdown":
                 logger.debug(f"Changed dropdown to {dropdown_value}")
                 assert idx is not None, "idx should not be None"
-                self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value[0]))
-                figure['layout']['shapes'][idx] = self._bbox_to_shape(self._curr_bboxs[idx])
-                return no_update, figure
+                update = self._handle_dropdown_changed(idx, dropdown_value[0], figure)
+                return update.bbox_layout, update.figure
 
             elif trigger_id == "graph_picture":
-                logger.debug(f"click_data: {click_data}")
 
                 if relayout_data is not None and "shapes" in relayout_data:
                     # A new box was drawn
                     # We receive all boxes from the data
-                    self._handle_relayout_new_box_drawn(relayout_data)
-                    return self._create_bbox_layout(), no_update
+                    update = self._handle_new_box_drawn(relayout_data)
+                    return update.bbox_layout, update.figure
                 elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
                     # A box was updated
-                    self._handle_relaxout_box_updated(relayout_data)
-                    return self._create_bbox_layout(), no_update
+                    update = self._handle_box_updated(relayout_data)
+                    return update.bbox_layout, update.figure
                 else:
+                    logger.warning(f"Unrecognized trigger for {trigger_id}")
                     return no_update, no_update
             else:
                 logger.warning(f"Unrecognized trigger ID: {trigger_id}")
@@ -239,35 +235,44 @@ class AnnotateImageBboxsAIO(html.Div):
                 
         logger.debug("Defined callbacks")
 
-    def _create_curr_figure_shapes(self) -> List:
-        return self._bboxs_to_shapes(self._curr_bboxs)
+    @dataclass
+    class Update:
+        bbox_layout: Any
+        figure: Any
 
-    def _handle_delete_button_pressed(self, idx: int):
+    def _refresh_figure_shapes(self, figure: Dict):
+        figure['layout']['shapes'] = self.converter.bboxs_to_shapes(self.controller.curr_bboxs)
+
+    def _handle_delete_button_pressed(self, idx: int, figure: Dict) -> Update:
         logger.debug(f"Deleting bbox idx: {idx}")
         self.controller.delete_bbox(idx)
+        self._refresh_figure_shapes(figure)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure)
 
-    def _handle_relayout_new_box_drawn(self, relayout_data: Dict):
-        bboxs_new = self._relayout_data_to_bboxs(relayout_data)
-        self.controller.set_bboxs(bboxs_new)
+    def _handle_highlight_button_pressed(self, idx: int, figure: Dict) -> Update:
+        self.controller.curr_bboxs[idx].is_highlighted = not self.controller.curr_bboxs[idx].is_highlighted
+        self._refresh_figure_shapes(figure)
+        return AnnotateImageBboxsAIO.Update(no_update, figure)
 
-    def _handle_relaxout_box_updated(self, relayout_data: Dict):
-        update = self._relayout_data_to_bbox_update(relayout_data)
-        self.controller.update_bbox(update)
+    def _handle_dropdown_changed(self, idx: int, dropdown_value_new: str, figure: Dict) -> Update:
+        if type(dropdown_value_new) == list:
+            if len(dropdown_value_new) == 0:
+                logger.warning("Dropdown value is empty list")
+                return AnnotateImageBboxsAIO.Update(no_update, no_update)
+            dropdown_value_new = dropdown_value_new[0]
+        assert idx is not None, "idx should not be None"
+        self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value_new))
+        self._refresh_figure_shapes(figure)
+        return AnnotateImageBboxsAIO.Update(no_update, figure)
 
-    @property
-    def _curr_bboxs(self) -> List[Bbox]:
-        if self.controller.curr is None:
-            return []
-        return self.controller.curr.bboxs or []
+    def _handle_new_box_drawn(self, relayout_data: Dict) -> Update:
+        new_shape = relayout_data["shapes"][-1]
+        new_bbox = self.converter.shape_to_bbox(new_shape)
+        self.controller.add_bbox(new_bbox)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update)
 
-    def _shape_to_bbox(self, shape: Dict) -> Bbox:
-        xyxy: List[float] = [ shape[c] for c in ["x0","y0","x1","y1"] ]
-        return Bbox(xyxy, None)
+    def _handle_box_updated(self, relayout_data: Dict) -> Update:
 
-    def _relayout_data_to_bboxs(self, relayout_data: Dict) -> List[Bbox]:
-        return [ self._shape_to_bbox(bbox) for bbox in relayout_data["shapes"] ]
-
-    def _relayout_data_to_bbox_update(self, relayout_data: Dict) -> BboxUpdate:
         # Parse shapes[0].x1 -> 0 from the brackets
         label = list(relayout_data.keys())[0]
         box_idx = int(label.split(".")[0].replace("shapes[","").replace("]",""))
@@ -275,11 +280,28 @@ class AnnotateImageBboxsAIO(html.Div):
         xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
 
         # Get current class name
-        class_name_curr = self._curr_bboxs[box_idx].class_name
+        class_name_curr = self.controller.curr_bboxs[box_idx].class_name
 
-        return BboxUpdate(box_idx, xyxy, class_name_curr)
+        # Update
+        update = BboxUpdate(box_idx, xyxy, class_name_curr)
+        self.controller.update_bbox(update)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update)
+        
+class BboxToShapeConverter:
 
-    def _bbox_to_shape(self, bbox: Bbox) -> Dict:
+    def __init__(self, options: AnnotateImageOptions):
+        self.options = options
+
+    def shape_to_bbox(self, shape: Dict) -> Bbox:
+        xyxy: List[float] = [ shape[c] for c in ["x0","y0","x1","y1"] ]
+        return Bbox(xyxy, None)
+
+    def bboxs_to_shapes(self, bboxs: Optional[List[Bbox]]) -> List[Dict]:
+        if bboxs is None:
+            return []
+        return [ self.bbox_to_shape(bbox) for bbox in bboxs ]
+
+    def bbox_to_shape(self, bbox: Bbox) -> Dict:
         # Line color
         if bbox.class_name is None:
             rgb = self.options.default_bbox_color
@@ -318,7 +340,3 @@ class AnnotateImageBboxsAIO(html.Div):
             'x1': bbox.xyxy[2], 
             'y1': bbox.xyxy[3]
             }
-
-    def _bboxs_to_shapes(self, bboxs: List[Bbox]) -> List[Dict]:
-        return [ self._bbox_to_shape(bbox) for bbox in bboxs ]
-        

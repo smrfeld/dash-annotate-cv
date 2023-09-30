@@ -83,25 +83,26 @@ class ImageAnnotations(DataClassDictMixin):
         # History
         history: Optional[List[Union[Label,Bbox]]] = None
 
-        def get_or_add_bbox(self, 
+        def add_bbox(self, 
             xyxy: Xyxy, 
             class_name: Optional[str], 
             author: Optional[str] = None, 
             store_timestamps: bool = False, 
             store_history: bool = False
             ) -> Bbox:
-            candidates = [bbox for bbox in self.bboxs or [] if tuple(bbox.xyxy) == tuple(xyxy) and bbox.class_name == class_name]
-            if len(candidates) >= 1:
-                bbox_obj = candidates[0]
-            else:
-                # Create new bbox
-                bbox_obj = ImageAnnotations.Annotation.Bbox(
-                    xyxy=xyxy,
-                    class_name=class_name,
-                    timestamp=datetime.datetime.now().timestamp() if store_timestamps else None,
-                    author=author
-                    )
-                self.bboxs = (self.bboxs or []) + [bbox_obj]
+            # candidates = [bbox for bbox in self.bboxs or [] if tuple(bbox.xyxy) == tuple(xyxy) and bbox.class_name == class_name]
+            # if len(candidates) >= 1:
+            #    bbox_obj = candidates[0]
+            # else:
+            
+            # Create new bbox
+            bbox_obj = ImageAnnotations.Annotation.Bbox(
+                xyxy=xyxy,
+                class_name=class_name,
+                timestamp=datetime.datetime.now().timestamp() if store_timestamps else None,
+                author=author
+                )
+            self.bboxs = (self.bboxs or []) + [bbox_obj]
 
             return bbox_obj
 
