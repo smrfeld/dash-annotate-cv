@@ -147,13 +147,11 @@ class AnnotateImageBboxsAIO(html.Div):
         return dbc.ListGroup(bbox_list_group)
 
     def _create_list_group_for_bbox_layout(self, bbox: Bbox, bbox_idx: int):
-        xyxy_label = ",".join([str(int(x)) for x in bbox.xyxy])
+        xyxy_label = "(%s)" % ",".join([str(int(x)) for x in bbox.xyxy])
         dropdown = dcc.Dropdown(
             self.controller.labels, 
             value=bbox.class_name, 
             id=self.ids.dropdown(self.aio_id, bbox_idx), 
-            # style=style_dropdown,
-            # multi=self.selection_mode == SelectionMode.MULTIPLE
             )
 
         button_delete = dbc.Button(
@@ -174,8 +172,8 @@ class AnnotateImageBboxsAIO(html.Div):
 
         return dbc.ListGroupItem([
             dbc.Row([
-                dbc.Col(xyxy_label, lg=3, md=6),
                 dbc.Col(dropdown, lg=3, md=6),
+                dbc.Col(xyxy_label, lg=3, md=6),
                 dbc.Col(button_highlight, lg=3, md=6),
                 dbc.Col(button_delete, lg=3, md=6)
                 ])
@@ -213,7 +211,7 @@ class AnnotateImageBboxsAIO(html.Div):
                 shape = figure['layout']['shapes'][idx]
                 logger.debug(shape)
                 if shape['fillcolor'] in ['rgba(0,0,0,0)','rgba(0, 0, 0, 0)']:
-                    shape['fillcolor'] = 'rgba(255,0,0,0.2)'
+                    shape['fillcolor'] = 'rgba(255,0,0,0.3)'
                     shape['line']['color'] = 'rgba(255,0,0,1)'
                 else:
                     shape['fillcolor'] = 'rgba(0,0,0,0)'
