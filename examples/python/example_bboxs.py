@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     # Set up the image and label sources
     image_source = dacv.ImageSource(images=images)
-    label_source = dacv.LabelSource(labels=["astronaut", "camera", "cat"])
+    label_source = dacv.LabelSource(labels=["face", "eye", "body"])
 
     # Set up writing
     storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_bboxs.json")

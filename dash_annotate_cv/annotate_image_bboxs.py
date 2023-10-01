@@ -26,9 +26,9 @@ class AnnotateImageBboxsAIO(html.Div):
 
     # A set of functions that create pattern-matching callbacks of the subcomponents
     class ids:
-        description = lambda aio_id: {
+        bbox_labeling = lambda aio_id: {
             'component': 'AnnotateImageBboxsAIO',
-            'subcomponent': 'description',
+            'subcomponent': 'bbox_labeling',
             'aio_id': aio_id
         }
         image = lambda aio_id: {
@@ -87,6 +87,7 @@ class AnnotateImageBboxsAIO(html.Div):
         """        
         options.check_valid()
 
+        self.options = options
         self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
@@ -94,7 +95,6 @@ class AnnotateImageBboxsAIO(html.Div):
             annotations_existing=annotations_existing,
             options=options
             )
-        self._curr_image_layout = None
         self.converter = BboxToShapeConverter(options=options)
         self.controls = AnnotateImageControlsAIO(
             controller=self.controller,
@@ -111,16 +111,20 @@ class AnnotateImageBboxsAIO(html.Div):
         """
         logger.debug("Creating layout for component")
 
-        self._curr_image_layout = self._create_layout_for_curr_image()  
+        curr_image_layout = self._create_layout_for_curr_image()  
+
+        instructions_txt = self.options.instructions_custom or "Draw bounding boxes on the image, and label the classes."
+        instructions = html.P(instructions_txt)
 
         return dbc.Row([
             dbc.Col([
-                html.Div(self._curr_image_layout, id=self.ids.image(self.aio_id))
+                html.Div(curr_image_layout, id=self.ids.image(self.aio_id))
             ], md=6),
             dbc.Col([
                 html.Div(id=self.ids.alert(self.aio_id)),
-                html.Div(id=self.ids.description(self.aio_id))
-                ], md=6)
+                instructions,
+                html.Div(id=self.ids.bbox_labeling(self.aio_id))
+                ], md=6, class_name="align-self-center")
         ])
 
     def _create_layout_for_curr_image(self):
@@ -130,7 +134,7 @@ class AnnotateImageBboxsAIO(html.Div):
         if image is None:
             return []
         fig = px.imshow(image)
-        rgb = self.controller.options.default_bbox_color
+        rgb = self.options.default_bbox_color
         line_color = 'rgba(%d,%d,%d,1)' % rgb
         fig.update_layout(
             dragmode="drawrect",
@@ -153,6 +157,7 @@ class AnnotateImageBboxsAIO(html.Div):
                 self._create_list_group_for_bbox_layout(bbox,idx)
                 for idx,bbox in enumerate(self.controller.curr.bboxs)
                 ]
+
         return dbc.ListGroup(bbox_list_group)
 
     def _create_list_group_for_bbox_layout(self, bbox: Bbox, bbox_idx: int):
@@ -208,7 +213,7 @@ class AnnotateImageBboxsAIO(html.Div):
         """        
         logger.debug("Defining callbacks")
         @callback(
-            Output(self.ids.description(MATCH), 'children'),
+            Output(self.ids.bbox_labeling(MATCH), 'children'),
             Output(self.ids.graph_picture(MATCH), "figure"),
             Output(self.ids.alert(MATCH), "children"),
             Input(self.ids.graph_picture(MATCH), "relayoutData"),

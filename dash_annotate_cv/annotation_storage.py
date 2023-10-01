@@ -4,6 +4,11 @@ from typing import Optional, Any
 from enum import Enum
 import json
 import os
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AnnotationStorage(DataClassDictMixin):
@@ -15,8 +20,8 @@ class AnnotationStorage(DataClassDictMixin):
         JSON = "json"
 
     class StorageFrequency(Enum):
-        EVERY_IMAGE = "every_image"
-        EVERY_N_IMAGES = "every_n_images"
+        EVERY_OPERATION = "every_operation"
+        EVERY_N_OPERATIONS = "every_n_operations"
 
     # Storage type
     storage_type: Type = Type.NONE
@@ -25,7 +30,7 @@ class AnnotationStorage(DataClassDictMixin):
     json_file: Optional[str] = None
 
     # Storage frequency
-    storage_frequency: StorageFrequency = StorageFrequency.EVERY_IMAGE
+    storage_frequency: StorageFrequency = StorageFrequency.EVERY_OPERATION
 
     # Storage frequency (if storage_frequency is StorageFrequency.EVERY_N_IMAGES)
     storage_frequency_every_n: int = 10
@@ -60,8 +65,8 @@ class AnnotationWriter:
             assert self.storage.json_file is not None, "json_file must be set if storage_type is JSON"
 
             # Check frequency
-            write_every = self.storage.storage_frequency == AnnotationStorage.StorageFrequency.EVERY_IMAGE
-            write_every_n = self.storage.storage_frequency == AnnotationStorage.StorageFrequency.EVERY_N_IMAGES and self._ctr_write % self.storage.storage_frequency_every_n == 0
+            write_every = self.storage.storage_frequency == AnnotationStorage.StorageFrequency.EVERY_OPERATION
+            write_every_n = self.storage.storage_frequency == AnnotationStorage.StorageFrequency.EVERY_N_OPERATIONS and self._ctr_write % self.storage.storage_frequency_every_n == 0
             if write_every or write_every_n:
 
                 # Write to file
@@ -70,6 +75,7 @@ class AnnotationWriter:
                     assert os.path.exists(dir_name), f"Directory of json_file does not exist: {dir_name}"
                 with open(self.storage.json_file,"w") as f:
                     json.dump(annotations.to_dict(), f, indent=3)
+                    logger.debug(f"Wrote to: '{self.storage.json_file}'")
 
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Unknown storage type: {self.storage.storage_type}")

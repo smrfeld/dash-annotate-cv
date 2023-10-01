@@ -103,7 +103,8 @@ class ImageAnnotations(DataClassDictMixin):
         bboxs: Optional[List[Bbox]] = None
 
         # History
-        history: Optional[List[Union[Label,BboxHistory]]] = None
+        history_bboxs: Optional[List[BboxHistory]] = None
+        history_labels: Optional[List[Label]] = None
 
         class Config(BaseConfig):
             omit_none = True

@@ -11,9 +11,10 @@ from mashumaro import DataClassDictMixin
 import os
 import datetime
 import json
-import logging
 import random
 from enum import Enum
+import copy
+import logging
 
 
 logger = logging.getLogger(__name__)
@@ -270,9 +271,9 @@ class AnnotateImageController:
         if self.options.store_history:
             op = ImageAnnotations.Annotation.BboxHistory(
                 operation=ImageAnnotations.Annotation.BboxHistory.Operation.ADD,
-                bbox=bbox_obj
+                bbox=copy.deepcopy(bbox_obj)
                 )
-            ann.history = [op] + (ann.history or [])
+            ann.history_bboxs = [op] + (ann.history_bboxs or [])
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -303,9 +304,9 @@ class AnnotateImageController:
         if self.options.store_history:
             op = ImageAnnotations.Annotation.BboxHistory(
                 operation=ImageAnnotations.Annotation.BboxHistory.Operation.DELETE,
-                bbox=bbox_old
+                bbox=copy.deepcopy(bbox_old)
                 )
-            ann.history = [op] + (ann.history or [])
+            ann.history_bboxs = [op] + (ann.history_bboxs or [])
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -346,9 +347,9 @@ class AnnotateImageController:
         if self.options.store_history:
             op = ImageAnnotations.Annotation.BboxHistory(
                 operation=ImageAnnotations.Annotation.BboxHistory.Operation.UPDATE,
-                bbox=ann.bboxs[update.idx]
+                bbox=copy.deepcopy(ann.bboxs[update.idx])
                 )
-            ann.history = [op] + (ann.history or [])
+            ann.history_bboxs = [op] + (ann.history_bboxs or [])
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -497,7 +498,7 @@ class AnnotateImageController:
 
         # Also add history
         if did_update and self.options.store_history:
-            ann.history = [label] + (ann.history or [])
+            ann.history_labels = [copy.deepcopy(label)] + (ann.history_labels or [])
         
         # Write
         self.annotation_writer.write(self.annotations)

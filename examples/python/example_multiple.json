@@ -9,7 +9,7 @@
             ],
             "timestamp": 1695583060.453788
          },
-         "history": [
+         "history_labels": [
             {
                "multiple": [
                   "cat",
@@ -28,7 +28,7 @@
             ],
             "timestamp": 1695583065.203316
          },
-         "history": [
+         "history_labels": [
             {
                "multiple": [
                   "astronaut",
@@ -47,7 +47,7 @@
             ],
             "timestamp": 1695583069.251143
          },
-         "history": [
+         "history_labels": [
             {
                "multiple": [
                   "camera",

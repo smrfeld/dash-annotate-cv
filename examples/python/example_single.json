@@ -6,7 +6,7 @@
             "single": "cat",
             "timestamp": 1695437162.30125
          },
-         "history": [
+         "history_labels": [
             {
                "single": "cat",
                "timestamp": 1693893968.634796
@@ -19,7 +19,7 @@
             "single": "camera",
             "timestamp": 1695437166.527937
          },
-         "history": [
+         "history_labels": [
             {
                "single": "camera",
                "timestamp": 1693893977.097665
@@ -32,7 +32,7 @@
             "single": "astronaut",
             "timestamp": 1695437164.89879
          },
-         "history": [
+         "history_labels": [
             {
                "single": "astronaut",
                "timestamp": 1695435195.254453
