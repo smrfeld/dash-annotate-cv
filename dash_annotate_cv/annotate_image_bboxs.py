@@ -1,4 +1,5 @@
 from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist, Bbox, BboxUpdate
+from dash_annotate_cv.annotate_image_controls import AnnotateImageControlsAIO
 from dash_annotate_cv.helpers import get_trigger_id
 from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
 from dash_annotate_cv.label_source import LabelSource
@@ -90,37 +91,30 @@ class AnnotateImageBboxsAIO(html.Div):
             )
         self._curr_image_layout = None
         self.converter = BboxToShapeConverter(options=options)
+        self.controls = AnnotateImageControlsAIO(
+            controller=self.controller,
+            refresh_layout_callback=self._create_layout,
+            aio_id=aio_id
+            )
+        self.aio_id = self.controls.aio_id
 
-        # Allow developers to pass in their own `aio_id` if they're
-        # binding their own callback to a particular component.
-        if aio_id is None:
-            # Otherwise use a uuid that has virtually no chance of collision.
-            # Uuids are safe in dash deployments with processes
-            # because this component's callbacks
-            # use a stateless pattern-matching callback:
-            # The actual ID does not matter as long as its unique and matches
-            # the PMC `MATCH` pattern..
-            self.aio_id = str(uuid.uuid4())
-        else:
-            self.aio_id = aio_id
-
-        super().__init__(self._create_layout(self.aio_id)) # Equivalent to `html.Div([...])`
+        super().__init__(self.controls) # Equivalent to `html.Div([...])`
         self._define_callbacks()
 
-    def _create_layout(self, aio_id: str):
+    def _create_layout(self):
         """Create layout for component
-        """        
+        """
         logger.debug("Creating layout for component")
 
         self._curr_image_layout = self._create_layout_for_curr_image()  
 
         return dbc.Row([
             dbc.Col([
-                html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
+                html.Div(self._curr_image_layout, id=self.ids.image(self.aio_id))
             ], md=6),
             dbc.Col([
-                html.Div(id=self.ids.alert(aio_id)),
-                html.Div(id=self.ids.description(aio_id))
+                html.Div(id=self.ids.alert(self.aio_id)),
+                html.Div(id=self.ids.description(self.aio_id))
                 ], md=6)
         ])
 
@@ -194,7 +188,7 @@ class AnnotateImageBboxsAIO(html.Div):
         
         # No bboxs
         if len(self.controller.curr_bboxs) == 0:
-            alerts.append(dbc.Alert("No bounding boxes", color="primary"))
+            alerts.append(dbc.Alert("Start by drawing a bounding box", color="primary"))
         
         # Bboxs without labels
         for bbox in self.controller.curr_bboxs:

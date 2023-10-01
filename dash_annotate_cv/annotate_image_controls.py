@@ -60,7 +60,7 @@ class AnnotateImageControlsAIO(html.Div):
     def __init__(
         self,
         controller: AnnotateImageController,
-        refresh_layout_callback: Callable[[], html.Div],
+        refresh_layout_callback: Callable[[], dbc.Row],
         aio_id: Optional[str] = None
         ):
         self.controller = controller
@@ -143,13 +143,16 @@ class AnnotateImageControlsAIO(html.Div):
         """Create layout for component
         """        
         return dbc.Row([
-            dbc.Col(md=6),
-            dbc.Col([
-                html.Div(id=self.ids.title(self.aio_id)),
-                html.Hr(),
-                html.Div(id=self.ids.alert(self.aio_id)),
-                self._create_layout_buttons(self.aio_id)
-            ], md=6),
+            dbc.Row([
+                dbc.Col(md=6),
+                dbc.Col([
+                    html.Div(id=self.ids.title(self.aio_id)),
+                    html.Hr(),
+                    html.Div(id=self.ids.alert(self.aio_id)),
+                    self._create_layout_buttons(self.aio_id)
+                ], md=6),
+            ]),
+            dbc.Col(html.Hr(), xs=12),
             dbc.Col(id=self.ids.content(self.aio_id), xs=12)
         ])
 
