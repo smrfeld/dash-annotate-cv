@@ -29,4 +29,8 @@ storage:
   json_file: example_bboxs.json
 
 # Options (optional)
-# options: ...
+options:
+  class_to_color:
+    eye: [255, 0, 0]
+    face: [0, 255, 0]
+    body: [0, 0, 255]

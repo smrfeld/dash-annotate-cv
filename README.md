@@ -2,16 +2,20 @@
 
 `dash_annotate_cv` is a Python Dash library for computer vision annotation tasks. It exposes reusable annotation components in a library format for `dash`.
 
-![](readme_gif.gif)
+![](readme_gif_image_labels.gif)
+*Example of whole-image label annotations*
+
+![](readme_gif_bboxs.gif)
+*Example of bounding box annotations*
 
 Supported tasks:
-* Annotation of images (whole image labels)
-* Annotating multiple labels per image
-* Annotating bounding boxes
+- [x] Annotation of images (whole image labels)
+- [x] Annotating multiple labels per image
+- [x] Annotating bounding boxes including labels
 
 Roadmap for future tasks:
-* Annotating video events
-* Annotating video tags
+- [ ] Annotating video events
+- [ ] Annotating video tags
 
 **Note**: this library is not meant for production usage. It is meant to be used for quick prototyping and testing of annotation tasks.
 
@@ -24,16 +28,17 @@ Roadmap for future tasks:
     conda activate dash_annotate_cv
     ```
 
-2. Install.
+2. Install using pip:
 
     ```bash
     pip install dash_annotate_cv
     ```
 
-    Or from the repository:
+    Or local install from the repository:
 
     ```bash
-    pip install -r requirements.txt
+    git clone https://github.com/smrfeld/dash-annotate-cv 
+    cd dash-annotate-cv
     pip install -e .
     ```
 
@@ -43,7 +48,7 @@ Roadmap for future tasks:
 
 The app can be launched in two ways:
 1. A simple command line utility lets you get up and running quickly.
-2. The app can be launched by writing a short Python script, which lets you use the annotation components in a flexible way in your own Dash app. 
+2. The app can be launched by writing a short Python script, which lets you use the annotation components in a flexible way in your own Dash app. We follow the practices of resuable components in Dash described in [All-in-one components for Dash](https://dash.plotly.com/all-in-one-components).
 
 Each is described here briefly. You can also check out the [examples](examples).
 
