@@ -1,6 +1,7 @@
 ---
 # Annotation mode
 # image_labels = Annotate image labels
+# bboxs = Annotate bounding boxes
 mode: image_labels
 
 # Label source
@@ -25,10 +26,10 @@ image_source:
 # Storage (optional)
 storage:
   storage_type: json
-  json_file: example.json
+  json_file: example_img_labels.json
 
 # Options (optional)
-options_image_labels:
+options:
 
   # How many labels can be selected per image
   selection_mode: single

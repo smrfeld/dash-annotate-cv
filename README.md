@@ -54,6 +54,7 @@ To get started labeling immediately, you can use a simple command line utility. 
 ```yaml
 # Annotation mode
 # image_labels = Annotate images with whole-image labels
+# bboxs = Annotate bounding boxes in each image
 mode: image_labels
 
 # Label source
@@ -81,7 +82,7 @@ storage:
   json_file: example.json
 
 # Options (optional)
-options_image_labels:
+options:
 
   # How many labels can be selected per image
   selection_mode: single

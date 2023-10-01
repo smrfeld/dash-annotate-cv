@@ -1,0 +1,32 @@
+---
+# Annotation mode
+# image_labels = Annotate image labels
+# bboxs = Annotate bounding boxes
+mode: bboxs
+
+# Label source
+label_source:
+  labels:
+  - eye
+  - face
+  - body
+
+# Image source
+image_source:
+
+  # Image source type
+  source_type: list_of_files
+
+  # List of files
+  list_of_files:
+  - ex_chelsea.jpg
+  - ex_astronaut.jpg
+  - ex_camera.jpg
+
+# Storage (optional)
+storage:
+  storage_type: json
+  json_file: example_bboxs.json
+
+# Options (optional)
+# options: ...
