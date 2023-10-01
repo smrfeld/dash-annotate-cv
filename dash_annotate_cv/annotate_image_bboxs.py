@@ -1,26 +1,20 @@
-from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, ImageAnn, NoCurrLabelError, InvalidLabelError, load_image_anns_if_exist, Bbox, BboxUpdate
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, Bbox, BboxUpdate
 from dash_annotate_cv.annotate_image_controls import AnnotateImageControlsAIO
 from dash_annotate_cv.helpers import get_trigger_id
-from dash_annotate_cv.image_source import ImageSource, IndexAboveError, IndexBelowError
+from dash_annotate_cv.image_source import ImageSource
 from dash_annotate_cv.label_source import LabelSource
 from dash_annotate_cv.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage
 
 from typing import Optional
 import plotly.express as px
-from dash import Dash, dcc, html, Input, Output, no_update, callback, State
-from skimage import data
-import json
+from dash import dcc, html, Input, Output, no_update, callback, State
 from dash import Output, Input, html, dcc, callback, MATCH, ALL
-import uuid
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, List, Dict, Any
 import plotly.express as px
 import dash_bootstrap_components as dbc
-from PIL import Image
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
-import plotly.graph_objects as go
-import dash 
 
 
 logger = logging.getLogger(__name__)
