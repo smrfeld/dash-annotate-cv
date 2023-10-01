@@ -123,9 +123,11 @@ class AnnotateImageBboxsAIO(html.Div):
         if image is None:
             return []
         fig = px.imshow(image)
+        rgb = self.controller.options.default_bbox_color
+        line_color = 'rgba(%d,%d,%d,1)' % rgb
         fig.update_layout(
             dragmode="drawrect",
-            clickmode='event+select'
+            newshape=dict(line_color=line_color)
             )
         fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
         return dcc.Graph(id=self.ids.graph_picture(self.aio_id), figure=fig)
@@ -212,7 +214,7 @@ class AnnotateImageBboxsAIO(html.Div):
             elif trigger_id == "dropdown":
                 logger.debug(f"Changed dropdown to {dropdown_value}")
                 assert idx is not None, "idx should not be None"
-                update = self._handle_dropdown_changed(idx, dropdown_value[0], figure)
+                update = self._handle_dropdown_changed(idx, dropdown_value[idx], figure)
                 return update.bbox_layout, update.figure
 
             elif trigger_id == "graph_picture":
@@ -228,11 +230,15 @@ class AnnotateImageBboxsAIO(html.Div):
                     return update.bbox_layout, update.figure
                 else:
                     logger.warning(f"Unrecognized trigger for {trigger_id}")
-                    return no_update, no_update
+                    # Just draw latest
+                    self._refresh_figure_shapes(figure)
+                    return self._create_bbox_layout(), figure
             else:
                 logger.warning(f"Unrecognized trigger ID: {trigger_id}")
-                return no_update, no_update
-                
+                # Just draw latest
+                self._refresh_figure_shapes(figure)
+                return self._create_bbox_layout(), figure
+            
         logger.debug("Defined callbacks")
 
     @dataclass
@@ -256,10 +262,8 @@ class AnnotateImageBboxsAIO(html.Div):
 
     def _handle_dropdown_changed(self, idx: int, dropdown_value_new: str, figure: Dict) -> Update:
         if type(dropdown_value_new) == list:
-            if len(dropdown_value_new) == 0:
-                logger.warning("Dropdown value is empty list")
-                return AnnotateImageBboxsAIO.Update(no_update, no_update)
-            dropdown_value_new = dropdown_value_new[0]
+            logger.warning("Dropdown value is list, expected string")
+            return AnnotateImageBboxsAIO.Update(no_update, no_update)
         assert idx is not None, "idx should not be None"
         self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value_new))
         self._refresh_figure_shapes(figure)
@@ -313,7 +317,7 @@ class BboxToShapeConverter:
 
         # Fill color
         if bbox.is_highlighted:
-            fill_color = 'rgba(%d,%d,%d,0.3)' % rgb
+            fill_color = 'rgba(%d,%d,%d,0.45)' % rgb
         else:
             fill_color = 'rgba(0,0,0,0)'
 

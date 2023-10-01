@@ -68,7 +68,7 @@ class AnnotateImageOptions(DataClassDictMixin):
     class_to_color: Optional[Dict[str,Tuple[int,int,int]]] = None
 
     # Default color
-    default_bbox_color: Tuple[int,int,int] = (68,68,68)
+    default_bbox_color: Tuple[int,int,int] = (64,64,88)
 
     def check_valid(self):
         if self.class_to_color is not None:
@@ -214,38 +214,6 @@ class AnnotateImageController:
         # Refresh
         self._refresh_curr()
 
-    '''
-    def set_bboxs(self, bboxs: List[Bbox]):
-        logger.debug(f"Setting {len(bboxs)} bboxs")
-
-        # Store the annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
-
-        # Go through all bboxs
-        for bbox in bboxs:
-
-            # Check labels are allowed
-            if bbox.class_name is not None and not bbox.class_name in self._labels:
-                raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
-
-            # Bounding box
-            ann.add_bbox(
-                xyxy=bbox.xyxy,
-                class_name=bbox.class_name,
-                author=self.options.author,
-                store_timestamps=self.options.store_timestamps,
-                store_history=self.options.store_history
-                )
-
-        # Remove all other bounding boxes
-        ann.remove_all_other_bboxs([ b.xyxy for b in bboxs])
-
-        # Write
-        self.annotation_writer.write(self.annotations)
-
-        # Refresh
-        self._refresh_curr()
-    '''
 
     def delete_bbox(self, idx: int):
 
