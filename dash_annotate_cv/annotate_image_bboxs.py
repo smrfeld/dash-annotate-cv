@@ -250,12 +250,12 @@ class AnnotateImageBboxsAIO(html.Div):
                 else:
                     logger.warning(f"Unrecognized trigger for {trigger_id}")
                     # Just draw latest
-                    self._refresh_figure_shapes(figure)
+                    self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
                     update = AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
             else:
                 logger.warning(f"Unrecognized trigger ID: {trigger_id}")
                 # Just draw latest
-                self._refresh_figure_shapes(figure)
+                self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
                 update = AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
             
             return update.bbox_layout, update.figure, update.alert
@@ -268,18 +268,15 @@ class AnnotateImageBboxsAIO(html.Div):
         figure: Any
         alert: Any
 
-    def _refresh_figure_shapes(self, figure: Dict):
-        figure['layout']['shapes'] = self.converter.bboxs_to_shapes(self.controller.curr_bboxs)
-
     def _handle_delete_button_pressed(self, idx: int, figure: Dict) -> Update:
         logger.debug(f"Deleting bbox idx: {idx}")
         self.controller.delete_bbox(idx)
-        self._refresh_figure_shapes(figure)
+        self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
         return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
 
     def _handle_highlight_button_pressed(self, idx: int, figure: Dict) -> Update:
         self.controller.curr_bboxs[idx].is_highlighted = not self.controller.curr_bboxs[idx].is_highlighted
-        self._refresh_figure_shapes(figure)
+        self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
         return AnnotateImageBboxsAIO.Update(no_update, figure, self._create_alert_layout())
 
     def _handle_dropdown_changed(self, idx: int, dropdown_value_new: str, figure: Dict) -> Update:
@@ -288,7 +285,7 @@ class AnnotateImageBboxsAIO(html.Div):
             return AnnotateImageBboxsAIO.Update(no_update, no_update, self._create_alert_layout())
         assert idx is not None, "idx should not be None"
         self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value_new))
-        self._refresh_figure_shapes(figure)
+        self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
         return AnnotateImageBboxsAIO.Update(no_update, figure, self._create_alert_layout())
 
     def _handle_new_box_drawn(self, relayout_data: Dict) -> Update:
@@ -317,6 +314,9 @@ class BboxToShapeConverter:
 
     def __init__(self, options: AnnotateImageOptions):
         self.options = options
+
+    def refresh_figure_shapes(self, figure: Dict, bboxs: Optional[List[Bbox]]):
+        figure['layout']['shapes'] = self.bboxs_to_shapes(bboxs)
 
     def shape_to_bbox(self, shape: Dict) -> Bbox:
         xyxy: List[float] = [ shape[c] for c in ["x0","y0","x1","y1"] ]
