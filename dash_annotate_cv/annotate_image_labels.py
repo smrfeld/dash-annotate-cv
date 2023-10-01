@@ -1,6 +1,6 @@
-from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, InvalidLabelError
 from dash_annotate_cv.annotate_image_controls import AnnotateImageControlsAIO
-from dash_annotate_cv.helpers import get_trigger_id
+from dash_annotate_cv.helpers import get_trigger_id, UnknownError
 from dash_annotate_cv.image_source import ImageSource
 from dash_annotate_cv.label_source import LabelSource
 from dash_annotate_cv.image_annotations import ImageAnnotations
@@ -67,6 +67,7 @@ class AnnotateImageLabelsAIO(html.Div):
             options (Options, optional): Options. Defaults to Options().
             selection_mode (SelectionMode): Selection mode. Defaults to SelectionMode.SINGLE.
         """
+        self.options = options
         self.controller = AnnotateImageController(
             label_source=label_source,
             image_source=image_source,
@@ -94,28 +95,39 @@ class AnnotateImageLabelsAIO(html.Div):
             Input(self.ids.dropdown(MATCH), 'value')
             )
         def change_label(dropdown_value):
-            trigger_id = get_trigger_id()
-            logger.debug(f"Trigger: '{trigger_id}'")
+            try:
+                trigger_id, _ = get_trigger_id()
+                logger.debug(f"Trigger: '{trigger_id}'")
 
-            is_initial = trigger_id == ""
+                is_initial = trigger_id == ""
 
-            if is_initial:
-                return self._create_image_layout(), self._create_existing_label_alert_layout()    
-            
-            elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
-                # Dropdown was changed
-                logger.debug(f"Dropdown changed: {dropdown_value}")
-                if self.selection_mode == SelectionMode.SINGLE:
-                    self.controller.store_label_single(dropdown_value[0])
-                elif self.selection_mode == SelectionMode.MULTIPLE:
-                    self.controller.store_label_multiple(dropdown_value)
+                if is_initial:
+                    return self._create_image_layout(), self._create_existing_label_alert_layout()    
+                
+                elif trigger_id == self.ids.dropdown(MATCH)["subcomponent"]:
+                    # Dropdown was changed
+                    logger.debug(f"Dropdown changed: {dropdown_value}")
+                    if self.selection_mode == SelectionMode.SINGLE:
+                        if type(dropdown_value) == list:
+                            dropdown_value = dropdown_value[0]
+                        self.controller.store_label_single(dropdown_value)
+                    elif self.selection_mode == SelectionMode.MULTIPLE:
+                        self.controller.store_label_multiple(dropdown_value)
+                    else:
+                        raise NotImplementedError(f"Unknown selection mode: {self.selection_mode}")
+                    return no_update, no_update
+
                 else:
-                    raise NotImplementedError(f"Unknown selection mode: {self.selection_mode}")
-                return no_update, no_update
+                    logger.debug(f"Unknown button pressed: {trigger_id}")
+                    return no_update, no_update
+            
+            except InvalidLabelError as e:
+                logger.error(f"Invalid label: {e}")
+                return no_update, dbc.Alert(f"Invalid label: {e}", color="danger")
 
-            else:
-                logger.debug(f"Unknown button pressed: {trigger_id}")
-                return no_update, no_update
+            except UnknownError as e:
+                logger.error(f"Unknown error: {e}")
+                return no_update, dbc.Alert(f"Unknown error: {e}", color="danger")
     
     def _create_layout(self):
         """Create layout for component
@@ -129,6 +141,9 @@ class AnnotateImageLabelsAIO(html.Div):
             else:
                 raise NotImplementedError(f"Unknown selection mode: {self.selection_mode}")
         
+        instructions_txt = self.options.instructions_custom or "Label this image from the following options:"
+        instructions = html.P(instructions_txt)
+
         dropdown = dcc.Dropdown(
             self.controller.labels, 
             value=label, 
@@ -142,8 +157,9 @@ class AnnotateImageLabelsAIO(html.Div):
                 html.Div(id=self.ids.image(self.aio_id))
             ], md=6),
             dbc.Col([
+                instructions,
                 dropdown
-            ], md=6)
+            ], md=6, class_name="align-self-center")
         ])
 
     def _create_existing_label_alert_layout(self) -> Optional[dbc.Alert]:

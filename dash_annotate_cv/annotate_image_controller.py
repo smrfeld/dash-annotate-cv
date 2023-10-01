@@ -2,6 +2,7 @@ from dash_annotate_cv.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError
 from dash_annotate_cv.label_source import LabelSource
+from dash_annotate_cv.helpers import UnknownError
 
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple
@@ -51,6 +52,9 @@ class ImageAnn:
 class AnnotateImageOptions(DataClassDictMixin):
     """Options
     """        
+
+    # Instructions
+    instructions_custom: Optional[str] = None
 
     # Whether to store timestamps
     store_timestamps: bool = True
@@ -219,8 +223,10 @@ class AnnotateImageController:
 
         # Update annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
-        assert ann.bboxs is not None, "Bboxs must be set"
-        assert idx < len(ann.bboxs), "Bbox idx must be less than number of bboxs"
+        if ann.bboxs is None:
+            raise UnknownError("Bboxs must be set")
+        if idx >= len(ann.bboxs):
+            raise UnknownError("Bbox idx must be less than number of bboxs")
         del ann.bboxs[idx]
         
         # Write
@@ -236,7 +242,8 @@ class AnnotateImageController:
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
 
         # Update the bbox
-        assert ann.bboxs is not None, "Bboxs must be set"
+        if ann.bboxs is None:
+            raise UnknownError("Bboxs must be set")
         if update.xyxy_new is not None:
             ann.bboxs[update.idx].xyxy = update.xyxy_new
         
@@ -260,6 +267,8 @@ class AnnotateImageController:
             NoCurrLabelError: If no current label
             InvalidLabelError: If provided label is not in label source
         """
+        if type(label_values) != list:
+            raise UnknownError("label_values must be a list")
 
         for label_value in label_values:
             if not label_value in self._labels:
@@ -282,6 +291,9 @@ class AnnotateImageController:
             NoCurrLabelError: If no current label
             InvalidLabelError: If provided label is not in label source
         """
+
+        if type(label_value) != str:
+            raise UnknownError("label_value must be a string")
 
         if not label_value in self._labels:
             raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (label_value, str(self._labels)))
@@ -408,7 +420,8 @@ def load_image_anns_if_exist(storage: AnnotationStorage) -> Optional[ImageAnnota
     if storage.storage_type == AnnotationStorage.Type.NONE:
         return None
     elif storage.storage_type == AnnotationStorage.Type.JSON:
-        assert storage.json_file is not None, "json_file must be set if storage_type is JSON"
+        if storage.json_file is None:
+            raise UnknownError("json_file must be set if storage_type is JSON")
 
         # Restart from existing annotations if any
         if os.path.exists(storage.json_file):

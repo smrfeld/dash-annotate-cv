@@ -7,6 +7,10 @@ from typing import Tuple, Optional
 logger = logging.getLogger(__name__)
 
 
+class UnknownError(Exception):
+    pass
+
+
 def get_trigger_id() -> Tuple[str,Optional[int]]:
     """Get the trigger ID from the callback context
     """
