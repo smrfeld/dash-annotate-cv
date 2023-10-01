@@ -16,7 +16,7 @@ from typing import Optional, Union, List, Dict, Any
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from PIL import Image
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import plotly.graph_objects as go
 import dash 
@@ -63,6 +63,11 @@ class AnnotateImageBboxsAIO(html.Div):
             'subcomponent': 'dropdown',
             'aio_id': aio_id,
             'idx': idx
+        }
+        alert = lambda aio_id: {
+            'component': 'AnnotateImageBboxsAIO',
+            'subcomponent': 'alert',
+            'aio_id': aio_id
         }
 
     ids = ids
@@ -113,9 +118,12 @@ class AnnotateImageBboxsAIO(html.Div):
             dbc.Col([
                 html.Div(self._curr_image_layout, id=self.ids.image(aio_id))
             ], md=6),
-            dbc.Col(html.Div("No bboxs", id=self.ids.description(aio_id)), md=6)
+            dbc.Col([
+                html.Div(id=self.ids.alert(aio_id)),
+                html.Div(id=self.ids.description(aio_id))
+                ], md=6)
         ])
-    
+
     def _create_layout_for_curr_image(self):
         """Create layout for the image
         """        
@@ -181,6 +189,21 @@ class AnnotateImageBboxsAIO(html.Div):
                 ])
             ])
 
+    def _create_alert_layout(self):
+        alerts = []
+        
+        # No bboxs
+        if len(self.controller.curr_bboxs) == 0:
+            alerts.append(dbc.Alert("No bounding boxes", color="primary"))
+        
+        # Bboxs without labels
+        for bbox in self.controller.curr_bboxs:
+            if bbox.class_name is None:
+                alerts.append(dbc.Alert("All bounding boxes must have labels", color="warning"))
+                break
+
+        return alerts
+
     def _define_callbacks(self):
         """Define callbacks
         """        
@@ -188,6 +211,7 @@ class AnnotateImageBboxsAIO(html.Div):
         @callback(
             Output(self.ids.description(MATCH), 'children'),
             Output(self.ids.graph_picture(MATCH), "figure"),
+            Output(self.ids.alert(MATCH), "children"),
             Input(self.ids.graph_picture(MATCH), "relayoutData"),
             Input(self.ids.delete_button(MATCH, ALL), "n_clicks"),
             Input(self.ids.highlight_bbox(MATCH, ALL), "n_clicks"),
@@ -203,19 +227,16 @@ class AnnotateImageBboxsAIO(html.Div):
                 logger.debug("Pressed delete_button")
                 assert idx is not None, "idx should not be None"
                 update = self._handle_delete_button_pressed(idx, figure)
-                return update.bbox_layout, update.figure
 
             elif trigger_id == "highlight_bbox":
                 logger.debug("Pressed highlight_bbox")
                 assert idx is not None, "idx should not be None"
                 update = self._handle_highlight_button_pressed(idx, figure)
-                return update.bbox_layout, update.figure
 
             elif trigger_id == "dropdown":
                 logger.debug(f"Changed dropdown to {dropdown_value}")
                 assert idx is not None, "idx should not be None"
                 update = self._handle_dropdown_changed(idx, dropdown_value[idx], figure)
-                return update.bbox_layout, update.figure
 
             elif trigger_id == "graph_picture":
 
@@ -223,28 +244,29 @@ class AnnotateImageBboxsAIO(html.Div):
                     # A new box was drawn
                     # We receive all boxes from the data
                     update = self._handle_new_box_drawn(relayout_data)
-                    return update.bbox_layout, update.figure
                 elif relayout_data is not None and "shapes" in " ".join(list(relayout_data.keys())):
                     # A box was updated
                     update = self._handle_box_updated(relayout_data)
-                    return update.bbox_layout, update.figure
                 else:
                     logger.warning(f"Unrecognized trigger for {trigger_id}")
                     # Just draw latest
                     self._refresh_figure_shapes(figure)
-                    return self._create_bbox_layout(), figure
+                    update = AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
             else:
                 logger.warning(f"Unrecognized trigger ID: {trigger_id}")
                 # Just draw latest
                 self._refresh_figure_shapes(figure)
-                return self._create_bbox_layout(), figure
+                update = AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
             
+            return update.bbox_layout, update.figure, update.alert
+
         logger.debug("Defined callbacks")
 
     @dataclass
     class Update:
         bbox_layout: Any
         figure: Any
+        alert: Any
 
     def _refresh_figure_shapes(self, figure: Dict):
         figure['layout']['shapes'] = self.converter.bboxs_to_shapes(self.controller.curr_bboxs)
@@ -253,27 +275,27 @@ class AnnotateImageBboxsAIO(html.Div):
         logger.debug(f"Deleting bbox idx: {idx}")
         self.controller.delete_bbox(idx)
         self._refresh_figure_shapes(figure)
-        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), figure, self._create_alert_layout())
 
     def _handle_highlight_button_pressed(self, idx: int, figure: Dict) -> Update:
         self.controller.curr_bboxs[idx].is_highlighted = not self.controller.curr_bboxs[idx].is_highlighted
         self._refresh_figure_shapes(figure)
-        return AnnotateImageBboxsAIO.Update(no_update, figure)
+        return AnnotateImageBboxsAIO.Update(no_update, figure, self._create_alert_layout())
 
     def _handle_dropdown_changed(self, idx: int, dropdown_value_new: str, figure: Dict) -> Update:
         if type(dropdown_value_new) == list:
             logger.warning("Dropdown value is list, expected string")
-            return AnnotateImageBboxsAIO.Update(no_update, no_update)
+            return AnnotateImageBboxsAIO.Update(no_update, no_update, self._create_alert_layout())
         assert idx is not None, "idx should not be None"
         self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value_new))
         self._refresh_figure_shapes(figure)
-        return AnnotateImageBboxsAIO.Update(no_update, figure)
+        return AnnotateImageBboxsAIO.Update(no_update, figure, self._create_alert_layout())
 
     def _handle_new_box_drawn(self, relayout_data: Dict) -> Update:
         new_shape = relayout_data["shapes"][-1]
         new_bbox = self.converter.shape_to_bbox(new_shape)
         self.controller.add_bbox(new_bbox)
-        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update, self._create_alert_layout())
 
     def _handle_box_updated(self, relayout_data: Dict) -> Update:
 
@@ -289,7 +311,7 @@ class AnnotateImageBboxsAIO(html.Div):
         # Update
         update = BboxUpdate(box_idx, xyxy, class_name_curr)
         self.controller.update_bbox(update)
-        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update)
+        return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update, self._create_alert_layout())
         
 class BboxToShapeConverter:
 
