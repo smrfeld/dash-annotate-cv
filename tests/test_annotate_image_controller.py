@@ -69,14 +69,6 @@ class TestAnnotateImageController:
         with pytest.raises(dacv.InvalidBboxError):
             bbox = dacv.Bbox(xyxy=[0,10,10], class_name="cat")
             controller.add_bbox(bbox)
-        # x2 > x1
-        with pytest.raises(dacv.InvalidBboxError):
-            bbox = dacv.Bbox(xyxy=[10,0,0,10], class_name="cat")
-            controller.add_bbox(bbox)
-        # y2 > y1
-        with pytest.raises(dacv.InvalidBboxError):
-            bbox = dacv.Bbox(xyxy=[0,10,10,0], class_name="cat")
-            controller.add_bbox(bbox)
 
     def test_delete_bbox(self, controller: dacv.AnnotateImageController):
         # Init state

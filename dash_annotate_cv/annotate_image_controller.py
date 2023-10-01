@@ -256,7 +256,7 @@ class AnnotateImageController:
         # Check labels are allowed
         if bbox.class_name is not None and not bbox.class_name in self._labels:
             raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
-        self._check_xyxy_valid(bbox.xyxy)
+        self._check_fix_xyxy_valid(bbox.xyxy)
 
         # Add bounding box
         bbox_obj = ImageAnnotations.Annotation.Bbox(
@@ -333,7 +333,7 @@ class AnnotateImageController:
         if ann.bboxs is None:
             raise UnknownError("Bboxs must be set")
         if update.xyxy_new != NoUpdate.NO_UPDATE:
-            self._check_xyxy_valid(update.xyxy_new)
+            self._check_fix_xyxy_valid(update.xyxy_new)
             ann.bboxs[update.idx].xyxy = update.xyxy_new
         if update.class_name_new != NoUpdate.NO_UPDATE:
             if not update.class_name_new in self._labels:
@@ -468,12 +468,20 @@ class AnnotateImageController:
         logger.debug(f"Updated curr: {self._curr}")
 
     
-    def _check_xyxy_valid(self, xyxy: Xyxy):
+    def _check_fix_xyxy_valid(self, xyxy: Xyxy):
         if len(xyxy) != 4:
             raise InvalidBboxError("xyxy must have length 4")
-        if xyxy[0] >= xyxy[2] or xyxy[1] >= xyxy[3]:
-            raise InvalidBboxError("xyxy must be in format [x1,y1,x2,y2] where x1 < x2 and y1 < y2")
 
+        # Positive
+        for x in xyxy:
+            if x < 0:
+                raise InvalidBboxError("xyxy must be positive")
+
+        # Ensure x0 < x1 and y0 < y1
+        if xyxy[0] >= xyxy[2]:
+            xyxy[0], xyxy[2] = xyxy[2], xyxy[0]
+        if xyxy[1] >= xyxy[3]:
+            xyxy[1], xyxy[3] = xyxy[3], xyxy[1]
 
     def _store_label(self, label: ImageAnnotations.Annotation.Label):
         if self._curr is None:
