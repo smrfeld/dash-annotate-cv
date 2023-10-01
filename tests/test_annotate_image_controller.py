@@ -21,7 +21,7 @@ def empty_controller():
         options=dacv.AnnotateImageOptions()
         )
 
-class TestAnnotateImageLabelsController:
+class TestAnnotateImageController:
 
     def test_add_bbox(self, controller: dacv.AnnotateImageController):
         # Init state

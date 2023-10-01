@@ -309,22 +309,57 @@ class AnnotateImageBboxsAIO(html.Div):
 class BboxToShapeConverter:
 
     def __init__(self, options: AnnotateImageOptions):
+        """Converter betweeen bbox and shape formats
+
+        Args:
+            options (AnnotateImageOptions): Options
+        """        
         options.check_valid()
         self.options = options
 
     def refresh_figure_shapes(self, figure: Dict, bboxs: Optional[List[Bbox]]):
+        """Set shapes in the given figure dict from the provided bboxs
+
+        Args:
+            figure (Dict): Figure dict
+            bboxs (Optional[List[Bbox]]): Bboxs
+        """        
         figure['layout']['shapes'] = self.bboxs_to_shapes(bboxs)
 
     def shape_to_bbox(self, shape: Dict) -> Bbox:
+        """Convert shape to bbox
+
+        Args:
+            shape (Dict): Shape
+
+        Returns:
+            Bbox: Bbox
+        """        
         xyxy: Xyxy = [ shape[c] for c in ["x0","y0","x1","y1"] ]
         return Bbox(xyxy, None)
 
     def bboxs_to_shapes(self, bboxs: Optional[List[Bbox]]) -> List[Dict]:
+        """Convert bboxs to shapes
+
+        Args:
+            bboxs (Optional[List[Bbox]]): Bboxs
+
+        Returns:
+            List[Dict]: Shapes
+        """        
         if bboxs is None:
             return []
         return [ self.bbox_to_shape(bbox) for bbox in bboxs ]
 
     def bbox_to_shape(self, bbox: Bbox) -> Dict:
+        """Convert bbox to shape
+
+        Args:
+            bbox (Bbox): Bbox
+
+        Returns:
+            Dict: Shape
+        """        
         # Line color
         if bbox.class_name is None:
             rgb = self.options.default_bbox_color
