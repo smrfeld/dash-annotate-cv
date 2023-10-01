@@ -1,10 +1,13 @@
 import dash
 import json
 import logging
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Union
 
 
 logger = logging.getLogger(__name__)
+
+
+Xyxy = List[Union[float,int]]
 
 
 class UnknownError(Exception):

@@ -1,6 +1,6 @@
-from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, Bbox, BboxUpdate
+from dash_annotate_cv.annotate_image_controller import AnnotateImageController, AnnotateImageOptions, Bbox, BboxUpdate, NoUpdate
 from dash_annotate_cv.annotate_image_controls import AnnotateImageControlsAIO
-from dash_annotate_cv.helpers import get_trigger_id
+from dash_annotate_cv.helpers import get_trigger_id, Xyxy
 from dash_annotate_cv.image_source import ImageSource
 from dash_annotate_cv.label_source import LabelSource
 from dash_annotate_cv.image_annotations import ImageAnnotations
@@ -272,7 +272,7 @@ class AnnotateImageBboxsAIO(html.Div):
             logger.warning("Dropdown value is list, expected string")
             return AnnotateImageBboxsAIO.Update(no_update, no_update, self._create_alert_layout())
         assert idx is not None, "idx should not be None"
-        self.controller.update_bbox(BboxUpdate(idx, None, dropdown_value_new))
+        self.controller.update_bbox(BboxUpdate(idx, class_name_new=dropdown_value_new))
         self.converter.refresh_figure_shapes(figure, self.controller.curr_bboxs)
         return AnnotateImageBboxsAIO.Update(no_update, figure, self._create_alert_layout())
 
@@ -290,11 +290,8 @@ class AnnotateImageBboxsAIO(html.Div):
         shapes_label = "shapes[%d]" % box_idx
         xyxy = [ relayout_data["%s.%s" % (shapes_label,label)] for label in ["x0","y0","x1","y1"] ]
 
-        # Get current class name
-        class_name_curr = self.controller.curr_bboxs[box_idx].class_name
-
         # Update
-        update = BboxUpdate(box_idx, xyxy, class_name_curr)
+        update = BboxUpdate(box_idx, xyxy_new=xyxy)
         self.controller.update_bbox(update)
         return AnnotateImageBboxsAIO.Update(self._create_bbox_layout(), no_update, self._create_alert_layout())
         
@@ -307,7 +304,7 @@ class BboxToShapeConverter:
         figure['layout']['shapes'] = self.bboxs_to_shapes(bboxs)
 
     def shape_to_bbox(self, shape: Dict) -> Bbox:
-        xyxy: List[float] = [ shape[c] for c in ["x0","y0","x1","y1"] ]
+        xyxy: Xyxy = [ shape[c] for c in ["x0","y0","x1","y1"] ]
         return Bbox(xyxy, None)
 
     def bboxs_to_shapes(self, bboxs: Optional[List[Bbox]]) -> List[Dict]:

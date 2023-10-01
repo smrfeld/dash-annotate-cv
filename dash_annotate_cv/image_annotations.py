@@ -1,3 +1,5 @@
+from dash_annotate_cv.helpers import Xyxy
+
 from typing import List, Optional, Dict, Union
 from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
@@ -5,9 +7,9 @@ from mashumaro.config import BaseConfig
 import datetime
 import logging
 
+
 logger = logging.getLogger(__name__)
 
-Xyxy = List[Union[float,int]]
 
 @dataclass
 class ImageAnnotations(DataClassDictMixin):

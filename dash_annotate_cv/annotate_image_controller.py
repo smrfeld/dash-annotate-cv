@@ -2,10 +2,10 @@ from dash_annotate_cv.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError
 from dash_annotate_cv.label_source import LabelSource
-from dash_annotate_cv.helpers import UnknownError
+from dash_annotate_cv.helpers import UnknownError, Xyxy
 
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 from PIL import Image
 from mashumaro import DataClassDictMixin
 import os
@@ -13,6 +13,7 @@ import datetime
 import json
 import logging
 import random
+from enum import Enum
 
 
 logger = logging.getLogger(__name__)
@@ -20,19 +21,42 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Bbox:
-    xyxy: List[float]
+    xyxy: Xyxy
     class_name: Optional[str]
     is_highlighted: bool = False
+
 
     def __repr__(self):
         return f"Bbox(xyxy={[int(x) for x in self.xyxy]}, class_name={self.class_name})"
 
 
+    def __eq__(self, other):
+        if not isinstance(other, Bbox):
+            return False
+        return self.xyxy == other.xyxy and self.class_name == other.class_name
+
+
+def bbox_eq_annotation(bbox: Bbox, bbox_ann: ImageAnnotations.Annotation.Bbox) -> bool:
+    return bbox.xyxy == bbox_ann.xyxy and bbox.class_name == bbox_ann.class_name
+
+
+class InvalidBboxError(Exception):
+    pass
+
+
+class NoUpdate(Enum):
+    NO_UPDATE = "NO_UPDATE"
+
+
 @dataclass
 class BboxUpdate:
     idx: int
-    xyxy_new: Optional[List[float]]
-    class_name_new: Optional[str]
+    xyxy_new: Union[NoUpdate,Xyxy] = NoUpdate.NO_UPDATE
+    class_name_new: Union[NoUpdate,Optional[str]] = NoUpdate.NO_UPDATE
+
+
+    def __repr__(self):
+        return f"BboxUpdate(idx={self.idx}, xyxy_new={self.xyxy_new}, class_name_new={self.class_name_new})"
 
 
 @dataclass
@@ -202,6 +226,7 @@ class AnnotateImageController:
         # Check labels are allowed
         if bbox.class_name is not None and not bbox.class_name in self._labels:
             raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
+        self._check_xyxy_valid(bbox.xyxy)
 
         # Bounding box
         ann.add_bbox(
@@ -244,11 +269,13 @@ class AnnotateImageController:
         # Update the bbox
         if ann.bboxs is None:
             raise UnknownError("Bboxs must be set")
-        if update.xyxy_new is not None:
+        if update.xyxy_new != NoUpdate.NO_UPDATE:
+            self._check_xyxy_valid(update.xyxy_new)
             ann.bboxs[update.idx].xyxy = update.xyxy_new
-        
-        # Always update class_name, even if new value is None (None means cleared selection)
-        ann.bboxs[update.idx].class_name = update.class_name_new
+        if update.class_name_new != NoUpdate.NO_UPDATE:
+            if not update.class_name_new in self._labels:
+                raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (update.class_name_new, str(self._labels)))
+            ann.bboxs[update.idx].class_name = update.class_name_new
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -305,6 +332,13 @@ class AnnotateImageController:
             author=self.options.author
             )
         self._store_label(label)
+
+
+    def _check_xyxy_valid(self, xyxy: Xyxy):
+        if len(xyxy) != 4:
+            raise InvalidBboxError("xyxy must have length 4")
+        if xyxy[0] >= xyxy[2] or xyxy[1] >= xyxy[3]:
+            raise InvalidBboxError("xyxy must be in format [x1,y1,x2,y2] where x1 < x2 and y1 < y2")
 
 
     def _store_label(self, label: ImageAnnotations.Annotation.Label):
