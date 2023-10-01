@@ -144,15 +144,15 @@ class AnnotateImageControlsAIO(html.Div):
         """        
         return dbc.Row([
             dbc.Row([
-                dbc.Col(md=6),
-                dbc.Col([
+                dbc.Col(
                     html.Div(id=self.ids.title(self.aio_id)),
-                    html.Hr(),
-                    html.Div(id=self.ids.alert(self.aio_id)),
-                    self._create_layout_buttons(self.aio_id)
-                ], md=6),
+                    md=6),
+                dbc.Col(
+                    self._create_layout_buttons(self.aio_id),
+                    md=6),
             ]),
             dbc.Col(html.Hr(), xs=12),
+            dbc.Col(id=self.ids.alert(self.aio_id), xs=12),
             dbc.Col(id=self.ids.content(self.aio_id), xs=12)
         ])
 
