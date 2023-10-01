@@ -35,14 +35,17 @@ if __name__ == "__main__":
     storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_single.json")
     annotations_existing = dacv.load_image_anns_if_exist(storage)
     
-    # Options for the  - single or multi-selection
-    options = dacv.AnnotateImageLabelsOptions(
-        selection_mode=dacv.AnnotateImageLabelsOptions.SelectionMode.SINGLE
+    aio = dacv.AnnotateImageLabelsAIO(
+        label_source=label_source, 
+        image_source=image_source, 
+        annotation_storage=storage, 
+        annotations_existing=annotations_existing, 
+        options=dacv.AnnotateImageOptions(),
+        selection_mode=dacv.SelectionMode.SINGLE
         )
-
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
     app.layout = dbc.Container([
         html.H1("Annotate Images"),
-        dacv.AnnotateImageLabelsAIO(label_source, image_source, annotation_storage=storage, annotations_existing=annotations_existing, options=options)
+        aio
         ])
     app.run(debug=False)

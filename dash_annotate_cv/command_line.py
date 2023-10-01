@@ -32,18 +32,19 @@ class Conf(DataClassDictMixin):
         labels (dacv.LabelSource): Label source
         images (dacv.ImageSource): Image source
         storage (dacv.AnnotationStorage): Annotation storage
-        options_image_labels (dacv.AnnotateImageLabelsOptions): Options for the image labels annotation
+        options (dacv.AnnotateImageLabelsOptions): Options for the image labels annotation
     """    
 
     class Mode(Enum):
         IMAGE_LABELS = "image_labels"
+        BBOXS = "bboxs"
 
     
     mode: Mode
     label_source: dacv.LabelSource
     image_source: dacv.ImageSource
     storage: dacv.AnnotationStorage = field(default_factory=dacv.AnnotationStorage)
-    options_image_labels: dacv.AnnotateImageLabelsOptions = field(default_factory=dacv.AnnotateImageLabelsOptions)
+    options: dacv.AnnotateImageOptions = field(default_factory=dacv.AnnotateImageOptions)
 
 
     def check_valid(self):
@@ -73,10 +74,22 @@ def cli():
             image_source=conf.image_source, 
             annotation_storage=conf.storage, 
             annotations_existing=annotations_existing, 
-            options=conf.options_image_labels
+            options=conf.options
             )
         app.layout = dbc.Container([
             html.H1("Annotate Images"),
+            aio
+            ])
+    elif conf.mode == Conf.Mode.BBOXS:
+        aio = dacv.AnnotateImageBboxsAIO(
+            label_source=conf.label_source, 
+            image_source=conf.image_source, 
+            annotation_storage=conf.storage, 
+            annotations_existing=annotations_existing, 
+            options=conf.options
+            )
+        app.layout = dbc.Container([
+            html.H1("Annotate Bounding Boxes"),
             aio
             ])
     else:

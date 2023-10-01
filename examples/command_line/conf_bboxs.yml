@@ -1,14 +1,15 @@
 ---
 # Annotation mode
 # image_labels = Annotate image labels
-mode: image_labels
+# bboxs = Annotate bounding boxes
+mode: bboxs
 
 # Label source
 label_source:
   labels:
-  - astronaut
-  - camera
-  - cat
+  - eye
+  - face
+  - body
 
 # Image source
 image_source:
@@ -25,10 +26,11 @@ image_source:
 # Storage (optional)
 storage:
   storage_type: json
-  json_file: example.json
+  json_file: example_bboxs.json
 
 # Options (optional)
-options_image_labels:
-
-  # How many labels can be selected per image
-  selection_mode: single
+options:
+  class_to_color:
+    eye: [255, 0, 0]
+    face: [0, 255, 0]
+    body: [0, 0, 255]
