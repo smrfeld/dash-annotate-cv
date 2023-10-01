@@ -99,6 +99,8 @@ class AnnotateImageOptions(DataClassDictMixin):
     default_bbox_color: Tuple[int,int,int] = (64,64,88)
 
     def check_valid(self):
+        """Check options are valid
+        """        
         if self.class_to_color is not None:
             assert isinstance(self.class_to_color, dict), "class_to_color must be a dict"
             for k,v in self.class_to_color.items():
@@ -114,6 +116,14 @@ class AnnotateImageOptions(DataClassDictMixin):
         return rgb
 
     def get_assign_color_for_class(self, class_name: str) -> Tuple[int,int,int]:
+        """Get color for class, or assign a random color if not already assigned
+
+        Args:
+            class_name (str): Class name
+
+        Returns:
+            Tuple[int,int,int]: RGB color values (255 max)
+        """        
         if self.class_to_color is None:
             self.class_to_color = {}
         if not class_name in self.class_to_color:
@@ -156,7 +166,8 @@ class AnnotateImageController:
             annotation_storage (AnnotationStorage, optional): Where to store annotations. Defaults to AnnotationStorage().
             annotations_existing (Optional[ImageAnnotations], optional): Existing annotations to continue from, if any. Defaults to None.
             options (Options, optional): Options. Defaults to Options().
-        """        
+        """
+        options.check_valid()
         self.options = options
         self.annotation_writer = AnnotationWriter(annotation_storage)
         self.label_source = label_source
@@ -205,6 +216,11 @@ class AnnotateImageController:
 
     @property
     def curr_bboxs(self) -> List[Bbox]:
+        """Current bounding boxes
+
+        Returns:
+            List[Bbox]: List of bounding boxes
+        """        
         if self.curr is None:
             return []
         return self.curr.bboxs or []
@@ -217,7 +233,20 @@ class AnnotateImageController:
         return os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
 
 
+    @property
+    def _timestamp_or_none(self) -> Optional[float]:
+        return datetime.datetime.now().timestamp() if self.options.store_timestamps else None
+
+
     def add_bbox(self, bbox: Bbox):
+        """Add bounding box
+
+        Args:
+            bbox (Bbox): Bounding box
+
+        Raises:
+            InvalidLabelError: Invalid label
+        """        
         logger.debug(f"Adding bbox: {bbox}")
 
         # Store the annotation
@@ -228,14 +257,22 @@ class AnnotateImageController:
             raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (bbox.class_name, str(self._labels)))
         self._check_xyxy_valid(bbox.xyxy)
 
-        # Bounding box
-        ann.add_bbox(
+        # Add bounding box
+        bbox_obj = ImageAnnotations.Annotation.Bbox(
             xyxy=bbox.xyxy,
             class_name=bbox.class_name,
-            author=self.options.author,
-            store_timestamps=self.options.store_timestamps,
-            store_history=self.options.store_history
+            timestamp=self._timestamp_or_none,
+            author=self.options.author
             )
+        ann.bboxs = (ann.bboxs or []) + [bbox_obj]
+
+        # History
+        if self.options.store_history:
+            op = ImageAnnotations.Annotation.BboxHistory(
+                operation=ImageAnnotations.Annotation.BboxHistory.Operation.ADD,
+                bbox=bbox_obj
+                )
+            ann.history = [op] + (ann.history or [])
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -245,15 +282,31 @@ class AnnotateImageController:
 
 
     def delete_bbox(self, idx: int):
+        """Delete bounding box
 
+        Args:
+            idx (int): Index of bounding box to delete
+
+        Raises:
+            UnknownError: Unknown error
+        """        
         # Update annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
         if ann.bboxs is None:
             raise UnknownError("Bboxs must be set")
         if idx >= len(ann.bboxs):
             raise UnknownError("Bbox idx must be less than number of bboxs")
+        bbox_old = ann.bboxs[idx]
         del ann.bboxs[idx]
         
+        # History
+        if self.options.store_history:
+            op = ImageAnnotations.Annotation.BboxHistory(
+                operation=ImageAnnotations.Annotation.BboxHistory.Operation.DELETE,
+                bbox=bbox_old
+                )
+            ann.history = [op] + (ann.history or [])
+
         # Write
         self.annotation_writer.write(self.annotations)
 
@@ -262,7 +315,16 @@ class AnnotateImageController:
 
 
     def update_bbox(self, update: BboxUpdate):
+        """Update bounding box
 
+        Args:
+            update (BboxUpdate): Update
+
+        Raises:
+            UnknownError: Unknown error
+            InvalidLabelError: Invalid label
+            InvalidBboxError: Invalid bounding box
+        """        
         # Store the annotation
         ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
 
@@ -276,6 +338,17 @@ class AnnotateImageController:
             if not update.class_name_new in self._labels:
                 raise InvalidLabelError("Label value: %s not in allowed labels: %s" % (update.class_name_new, str(self._labels)))
             ann.bboxs[update.idx].class_name = update.class_name_new
+        
+        # Update timestamp
+        ann.bboxs[update.idx].timestamp = self._timestamp_or_none
+
+        # History
+        if self.options.store_history:
+            op = ImageAnnotations.Annotation.BboxHistory(
+                operation=ImageAnnotations.Annotation.BboxHistory.Operation.UPDATE,
+                bbox=ann.bboxs[update.idx]
+                )
+            ann.history = [op] + (ann.history or [])
 
         # Write
         self.annotation_writer.write(self.annotations)
@@ -303,7 +376,7 @@ class AnnotateImageController:
 
         label = ImageAnnotations.Annotation.Label(
             multiple=label_values,
-            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+            timestamp=self._timestamp_or_none,
             author=self.options.author
             )
         self._store_label(label)
@@ -328,61 +401,10 @@ class AnnotateImageController:
         # Label
         label = ImageAnnotations.Annotation.Label(
             single=label_value,
-            timestamp=datetime.datetime.now().timestamp() if self.options.store_timestamps else None,
+            timestamp=self._timestamp_or_none,
             author=self.options.author
             )
         self._store_label(label)
-
-
-    def _check_xyxy_valid(self, xyxy: Xyxy):
-        if len(xyxy) != 4:
-            raise InvalidBboxError("xyxy must have length 4")
-        if xyxy[0] >= xyxy[2] or xyxy[1] >= xyxy[3]:
-            raise InvalidBboxError("xyxy must be in format [x1,y1,x2,y2] where x1 < x2 and y1 < y2")
-
-
-    def _store_label(self, label: ImageAnnotations.Annotation.Label):
-        """Store label for image
-
-        Args:
-            label_value (str): Label value
-
-        Raises:
-            NoCurrLabelError: If no current label
-            InvalidLabelError: If provided label is not in label source
-        """        
-        if self._curr is None:
-            raise NoCurrLabelError("No current label")
-
-        # Store the annotation
-        image_name = os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
-
-        did_update = False
-        if image_name in self.annotations.image_to_entry:
-            ann = self.annotations.image_to_entry[image_name]
-            if ann.label != label:
-                ann.label = label
-                did_update = True
-        else:
-            ann = ImageAnnotations.Annotation(
-                image_name=image_name,
-                label=label
-                )
-            self.annotations.image_to_entry[image_name] = ann
-            did_update = True
-
-        # Also add history
-        if did_update and self.options.store_history:
-            if ann.history is None:
-                ann.history = []
-            ann.history.append(label)
-
-        # Write
-        self.annotation_writer.write(self.annotations)
-
-        # Load the next image
-        image_idx, image_name, image = self._image_iterator.next()
-        self._update_curr(image_idx, image_name, image)
 
 
     def next_image(self):
@@ -422,11 +444,6 @@ class AnnotateImageController:
 
 
     def _update_curr(self, image_idx: int, image_name: str, image: Image.Image):
-        """Get existing label for image
-
-        Args:
-            image_name (str): Name of image
-        """      
         label_single: Optional[str] = None  
         label_multiple: Optional[List[str]] = None
         bboxs: Optional[List[Bbox]] = None
@@ -449,8 +466,59 @@ class AnnotateImageController:
         self._curr = ImageAnn(image_idx, image_name, image, label_single, label_multiple, bboxs)
         logger.debug(f"Updated curr: {self._curr}")
 
+    
+    def _check_xyxy_valid(self, xyxy: Xyxy):
+        if len(xyxy) != 4:
+            raise InvalidBboxError("xyxy must have length 4")
+        if xyxy[0] >= xyxy[2] or xyxy[1] >= xyxy[3]:
+            raise InvalidBboxError("xyxy must be in format [x1,y1,x2,y2] where x1 < x2 and y1 < y2")
+
+
+    def _store_label(self, label: ImageAnnotations.Annotation.Label):
+        if self._curr is None:
+            raise NoCurrLabelError("No current label")
+
+        # Store the annotation
+        image_name = os.path.basename(self._curr.image_name) if self.options.use_basename_for_image else self._curr.image_name
+
+        did_update = False
+        if image_name in self.annotations.image_to_entry:
+            ann = self.annotations.image_to_entry[image_name]
+            if ann.label != label:
+                ann.label = label
+                did_update = True
+        else:
+            ann = ImageAnnotations.Annotation(
+                image_name=image_name,
+                label=label
+                )
+            self.annotations.image_to_entry[image_name] = ann
+            did_update = True
+
+        # Also add history
+        if did_update and self.options.store_history:
+            ann.history = [label] + (ann.history or [])
+        
+        # Write
+        self.annotation_writer.write(self.annotations)
+
+        # Load the next image
+        image_idx, image_name, image = self._image_iterator.next()
+        self._update_curr(image_idx, image_name, image)
+
 
 def load_image_anns_if_exist(storage: AnnotationStorage) -> Optional[ImageAnnotations]:
+    """Load image annotations if they exist
+
+    Args:
+        storage (AnnotationStorage): Storage
+
+    Raises:
+        UnknownError: Unknown error
+
+    Returns:
+        Optional[ImageAnnotations]: Image annotations if they exist
+    """    
     if storage.storage_type == AnnotationStorage.Type.NONE:
         return None
     elif storage.storage_type == AnnotationStorage.Type.JSON:

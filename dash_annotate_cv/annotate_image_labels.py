@@ -67,6 +67,7 @@ class AnnotateImageLabelsAIO(html.Div):
             options (Options, optional): Options. Defaults to Options().
             selection_mode (SelectionMode): Selection mode. Defaults to SelectionMode.SINGLE.
         """
+        options.check_valid()
         self.options = options
         self.controller = AnnotateImageController(
             label_source=label_source,

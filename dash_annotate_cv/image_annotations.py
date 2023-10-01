@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
 import datetime
+from enum import Enum
 import logging
 
 
@@ -16,10 +17,12 @@ class ImageAnnotations(DataClassDictMixin):
     """Image annotations result
     """        
 
+
     @dataclass
     class Annotation(DataClassDictMixin):
         """Annotation for a single image
         """        
+
 
         @dataclass
         class Label(DataClassDictMixin):
@@ -47,6 +50,7 @@ class ImageAnnotations(DataClassDictMixin):
             class Config(BaseConfig):
                 omit_none = True
 
+
         @dataclass
         class Bbox(DataClassDictMixin):
             """Bounding box
@@ -73,6 +77,22 @@ class ImageAnnotations(DataClassDictMixin):
             class Config(BaseConfig):
                 omit_none = True
 
+
+        @dataclass
+        class BboxHistory(DataClassDictMixin):
+
+            class Operation(Enum):
+                ADD = "add"
+                DELETE = "delete"
+                UPDATE = "update"
+
+            # Operation
+            operation: Operation
+
+            # Bbox
+            bbox: "ImageAnnotations.Annotation.Bbox"
+        
+
         # Image name
         image_name: str
 
@@ -83,41 +103,11 @@ class ImageAnnotations(DataClassDictMixin):
         bboxs: Optional[List[Bbox]] = None
 
         # History
-        history: Optional[List[Union[Label,Bbox]]] = None
-
-        def add_bbox(self, 
-            xyxy: Xyxy, 
-            class_name: Optional[str], 
-            author: Optional[str] = None, 
-            store_timestamps: bool = False, 
-            store_history: bool = False
-            ) -> Bbox:
-            # candidates = [bbox for bbox in self.bboxs or [] if tuple(bbox.xyxy) == tuple(xyxy) and bbox.class_name == class_name]
-            # if len(candidates) >= 1:
-            #    bbox_obj = candidates[0]
-            # else:
-            
-            # Create new bbox
-            bbox_obj = ImageAnnotations.Annotation.Bbox(
-                xyxy=xyxy,
-                class_name=class_name,
-                timestamp=datetime.datetime.now().timestamp() if store_timestamps else None,
-                author=author
-                )
-            self.bboxs = (self.bboxs or []) + [bbox_obj]
-
-            return bbox_obj
-
-        def remove_all_other_bboxs(self, bboxs: List[Xyxy]):
-            idxs_remove = []
-            for i,bbox in enumerate(self.bboxs or []):
-                if bbox.xyxy not in bboxs:
-                    idxs_remove.append(i)
-            logger.debug(f"Removing {len(idxs_remove)} bboxs of current {len(self.bboxs or [])} which are not in the specified {len(bboxs)} bboxs")
-            self.bboxs = [bbox for i,bbox in enumerate(self.bboxs or []) if i not in idxs_remove]
+        history: Optional[List[Union[Label,BboxHistory]]] = None
 
         class Config(BaseConfig):
             omit_none = True
+
 
     # Image name to annotation
     image_to_entry: Dict[str,Annotation]

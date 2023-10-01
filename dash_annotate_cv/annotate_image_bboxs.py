@@ -75,6 +75,17 @@ class AnnotateImageBboxsAIO(html.Div):
         aio_id: Optional[str] = None,
         options: AnnotateImageOptions = AnnotateImageOptions()
         ):
+        """Constructor
+
+        Args:
+            label_source (LabelSource): Label source
+            image_source (ImageSource): Image source
+            annotation_storage (AnnotationStorage, optional): Storage. Defaults to AnnotationStorage().
+            annotations_existing (Optional[ImageAnnotations], optional): Existing annotations. Defaults to None.
+            aio_id (Optional[str], optional): AIO Id to use for components. Defaults to None.
+            options (AnnotateImageOptions, optional): Options. Defaults to AnnotateImageOptions().
+        """        
+        options.check_valid()
 
         self.controller = AnnotateImageController(
             label_source=label_source,
@@ -298,6 +309,7 @@ class AnnotateImageBboxsAIO(html.Div):
 class BboxToShapeConverter:
 
     def __init__(self, options: AnnotateImageOptions):
+        options.check_valid()
         self.options = options
 
     def refresh_figure_shapes(self, figure: Dict, bboxs: Optional[List[Bbox]]):
