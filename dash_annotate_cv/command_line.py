@@ -80,6 +80,18 @@ def cli():
             html.H1("Annotate Images"),
             aio
             ])
+    elif conf.mode == Conf.Mode.BBOXS:
+        aio = dacv.AnnotateImageBboxsAIO(
+            label_source=conf.label_source, 
+            image_source=conf.image_source, 
+            annotation_storage=conf.storage, 
+            annotations_existing=annotations_existing, 
+            options=conf.options
+            )
+        app.layout = dbc.Container([
+            html.H1("Annotate Bounding Boxes"),
+            aio
+            ])
     else:
         raise NotImplementedError(f"Unrecognized mode: '{conf.mode}'.")
         
