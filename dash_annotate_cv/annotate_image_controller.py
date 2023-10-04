@@ -1,4 +1,4 @@
-from dash_annotate_cv.image_annotations import ImageAnnotations
+from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError
 from dash_annotate_cv.label_source import LabelSource
@@ -251,7 +251,12 @@ class AnnotateImageController:
         logger.debug(f"Adding bbox: {bbox}")
 
         # Store the annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name, 
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
 
         # Check labels are allowed
         if bbox.class_name is not None and not bbox.class_name in self._labels:
@@ -292,7 +297,12 @@ class AnnotateImageController:
             UnknownError: Unknown error
         """        
         # Update annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name,
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
         if ann.bboxs is None:
             raise UnknownError("Bboxs must be set")
         if idx >= len(ann.bboxs):
@@ -327,7 +337,12 @@ class AnnotateImageController:
             InvalidBboxError: Invalid bounding box
         """        
         # Store the annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name,
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
 
         # Update the bbox
         if ann.bboxs is None:

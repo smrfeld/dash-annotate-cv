@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 Xyxy = List[Union[float,int]]
+Xywh = List[Union[float,int]]
 
 
 class UnknownError(Exception):
