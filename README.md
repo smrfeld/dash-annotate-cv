@@ -14,6 +14,9 @@ Supported tasks:
 - [x] Annotating bounding boxes including labels
 
 Roadmap for future tasks:
+- [ ] Support for more annotation formats: YOLO, COCO, etc.
+- [ ] Support for image segmentation tasks.
+- [ ] Support for skeleton annotation tasks.
 - [ ] Annotating video events
 - [ ] Annotating video tags
 
