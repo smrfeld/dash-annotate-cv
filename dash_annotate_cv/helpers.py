@@ -11,6 +11,18 @@ Xyxy = List[Union[float,int]]
 Xywh = List[Union[float,int]]
 
 
+def xyxy_to_xywh(xyxy: Xyxy) -> Xywh:
+    """Convert xyxy to xywh
+    """
+    return [ min(xyxy[0],xyxy[2]), min(xyxy[1],xyxy[3]), abs(xyxy[2] - xyxy[0]), abs(xyxy[3] - xyxy[1])]
+
+
+def xywh_to_xyxy(xywh: Xywh) -> Xyxy:
+    """Convert xywh to xyxy
+    """
+    return [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
+
+
 class UnknownError(Exception):
     pass
 

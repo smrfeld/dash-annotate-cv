@@ -1,4 +1,4 @@
-from dash_annotate_cv.helpers import Xyxy, Xywh
+from dash_annotate_cv.helpers import Xyxy, Xywh, xyxy_to_xywh
 
 from typing import List, Optional, Dict, Union
 from dataclasses import dataclass
@@ -104,12 +104,7 @@ class ImageAnnotations(DataClassDictMixin):
                 Returns:
                     Xywh: XYWH format (top left x, top left y, width, height)
                 """                
-                return [
-                    self.xyxy[0],
-                    self.xyxy[1],
-                    abs(self.xyxy[2]-self.xyxy[0]),
-                    abs(self.xyxy[3]-self.xyxy[1])
-                    ]
+                return xyxy_to_xywh(self.xyxy)
 
             class Config(BaseConfig):
                 omit_none = True
@@ -164,7 +159,21 @@ class ImageAnnotations(DataClassDictMixin):
         return cls(image_to_entry={})
 
 
-    def get_or_add_image(self, image_name: str, img_width: Optional[int], img_height: Optional[int]) -> Annotation:
+    def get_or_add_image(self, 
+        image_name: str, 
+        img_width: Optional[int] = None, 
+        img_height: Optional[int] = None
+        ) -> Annotation:
+        """Get an image by name if it exists, or add it
+
+        Args:
+            image_name (str): Image name
+            img_width (Optional[int], optional): Image width. Defaults to None.
+            img_height (Optional[int], optional): Image height. Defaults to None.
+
+        Returns:
+            Annotation: The existing annotation for the image, or makes and adds a new one
+        """        
         if image_name in self.image_to_entry:
             ann = self.image_to_entry[image_name]
             if ann.bboxs is None:

@@ -1,3 +1,4 @@
+from dash_annotate_cv.helpers import xywh_to_xyxy
 from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 
 import json
@@ -61,3 +62,46 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
     with open(fname_output_json,'w') as f:        
         json.dump(coco_dct, f, indent=3)
         logger.debug(f"Wrote to {fname_output_json}")
+
+
+def load_from_coco(fname_json: str) -> ImageAnnotations:
+
+    with open(fname_json,'r') as f:
+        coco_dct = json.load(f)
+
+    anns = ImageAnnotations.new()
+
+    # Add all images
+    for img in coco_dct["images"]:
+        anns.get_or_add_image(
+            image_name=img["file_name"],
+            img_width=img["width"],
+            img_height=img["height"]
+            )
+    
+    for ann in coco_dct["annotations"]:
+
+        # Get image obj
+        image_id = ann["image_id"]
+        img_dct_cands = [ img for img in coco_dct["images"] if img["id"] == image_id ]
+        assert len(img_dct_cands) == 1, f"Cound not find image with id {image_id}"
+        img_dct = img_dct_cands[0]
+        image = anns.get_or_add_image(image_name=img_dct["file_name"])
+
+        # Get category name
+        cat_id = ann["category_id"]
+        cat_dct_cands = [ cat for cat in coco_dct["categories"] if cat["id"] == cat_id ]
+        assert len(cat_dct_cands) == 1, f"Cound not find category with id {cat_id}"
+        cat_dct = cat_dct_cands[0]
+        class_name = cat_dct["name"]
+
+        # Add bounding box
+        bbox = ImageAnnotations.Annotation.Bbox(
+            xyxy=xywh_to_xyxy(ann["bbox"]),
+            class_name=class_name
+            )
+        if image.bboxs is None:
+            image.bboxs = []
+        image.bboxs.append(bbox)
+
+    return anns
