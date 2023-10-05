@@ -33,6 +33,16 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
         # Add annotations
         for bbox in anns_for_img.bboxs or []:
 
+            # Skip bboxs with no class name
+            if bbox.class_name is None:
+                logger.warning(f"Skipping writing bbox with no class name to COCO format: {bbox}")
+                continue
+                
+            # Skip bboxs with area <= 0
+            if bbox.area <= 0:
+                logger.warning(f"Skipping writing bbox with area <= 0 to COCO format: {bbox}")
+                continue
+
             # Add category if needed or get category id
             if bbox.class_name not in [cat["name"] for cat in coco_dct["categories"]]:
                 cat = {

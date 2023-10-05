@@ -1,0 +1,125 @@
+{
+   "images": [
+      {
+         "id": 1,
+         "width": 451,
+         "height": 300,
+         "file_name": "chelsea"
+      },
+      {
+         "id": 2,
+         "width": 512,
+         "height": 512,
+         "file_name": "astronaut"
+      },
+      {
+         "id": 3,
+         "width": 512,
+         "height": 512,
+         "file_name": "camera"
+      }
+   ],
+   "annotations": [
+      {
+         "id": 1,
+         "image_id": 1,
+         "category_id": 1,
+         "segmentation": [],
+         "bbox": [
+            132.14705882352942,
+            82.80800404268153,
+            81.06209150326796,
+            70.74509803921568
+         ],
+         "area": 5734.745610662564,
+         "iscrowd": 0
+      },
+      {
+         "id": 2,
+         "image_id": 1,
+         "category_id": 1,
+         "segmentation": [],
+         "bbox": [
+            290.58660130718954,
+            106.38970338908675,
+            56.74346405228761,
+            61.90196078431373
+         ],
+         "area": 3512.531686530823,
+         "iscrowd": 0
+      },
+      {
+         "id": 3,
+         "image_id": 2,
+         "category_id": 2,
+         "segmentation": [],
+         "bbox": [
+            24.680327868852466,
+            25.879391100702577,
+            328.54332552693216,
+            473.6299765807962
+         ],
+         "area": 155607.96757509778,
+         "iscrowd": 0
+      },
+      {
+         "id": 4,
+         "image_id": 2,
+         "category_id": 3,
+         "segmentation": [],
+         "bbox": [
+            169.76697892271667,
+            13.888758782201405,
+            131.89695550351294,
+            170.26697892271665
+         ],
+         "area": 22457.696142687135,
+         "iscrowd": 0
+      },
+      {
+         "id": 5,
+         "image_id": 3,
+         "category_id": 2,
+         "segmentation": [],
+         "bbox": [
+            7.893442622950821,
+            66.64754098360656,
+            329.7423887587822,
+            426.86651053864165
+         ],
+         "area": 140755.98286613758,
+         "iscrowd": 0
+      },
+      {
+         "id": 6,
+         "image_id": 3,
+         "category_id": 3,
+         "segmentation": [],
+         "bbox": [
+            170.96604215456676,
+            52.258782201405154,
+            97.12412177985948,
+            146.28571428571428
+         ],
+         "area": 14207.871528939442,
+         "iscrowd": 0
+      }
+   ],
+   "categories": [
+      {
+         "id": 1,
+         "name": "eye",
+         "supercategory": "none"
+      },
+      {
+         "id": 2,
+         "name": "body",
+         "supercategory": "none"
+      },
+      {
+         "id": 3,
+         "name": "face",
+         "supercategory": "none"
+      }
+   ]
+}
