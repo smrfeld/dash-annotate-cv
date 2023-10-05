@@ -25,7 +25,8 @@ image_source:
 
 # Storage (optional)
 storage:
-  storage_type: json
+  storage_types: 
+  - json # Default JSON storage format
   json_file: example_img_labels.json
 
 # Options (optional)
