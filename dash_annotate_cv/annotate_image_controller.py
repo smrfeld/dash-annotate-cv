@@ -529,29 +529,3 @@ class AnnotateImageController:
         # Load the next image
         image_idx, image_name, image = self._image_iterator.next()
         self._update_curr(image_idx, image_name, image)
-
-
-def load_image_anns_if_exist(storage: AnnotationStorage) -> Optional[ImageAnnotations]:
-    """Load image annotations if they exist
-
-    Args:
-        storage (AnnotationStorage): Storage
-
-    Raises:
-        UnknownError: Unknown error
-
-    Returns:
-        Optional[ImageAnnotations]: Image annotations if they exist
-    """    
-    if storage.storage_type == AnnotationStorage.Type.NONE:
-        return None
-    elif storage.storage_type == AnnotationStorage.Type.JSON:
-        if storage.json_file is None:
-            raise UnknownError("json_file must be set if storage_type is JSON")
-
-        # Restart from existing annotations if any
-        if os.path.exists(storage.json_file):
-            with open(storage.json_file,"r") as f:
-                return ImageAnnotations.from_dict(json.load(f))
-        else:
-            return None

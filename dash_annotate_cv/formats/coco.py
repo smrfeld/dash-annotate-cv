@@ -3,7 +3,7 @@ from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 
 import json
 import os
-from typing import Dict
+from typing import Dict, Optional
 import logging
 
 
@@ -64,8 +64,9 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
         logger.debug(f"Wrote to {fname_output_json}")
 
 
-def load_from_coco(fname_json: str) -> ImageAnnotations:
-
+def load_from_coco_if_exist(fname_json: str) -> Optional[ImageAnnotations]:
+    if not os.path.exists(fname_json):
+        return None
     with open(fname_json,'r') as f:
         coco_dct = json.load(f)
 

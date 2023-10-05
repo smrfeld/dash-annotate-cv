@@ -32,8 +32,8 @@ if __name__ == "__main__":
     label_source = dacv.LabelSource(labels=["astronaut", "camera", "cat"])
 
     # Set up writing
-    storage = dacv.AnnotationStorage(storage_type=dacv.AnnotationStorage.Type.JSON, json_file="example_single.json")
-    annotations_existing = dacv.load_image_anns_if_exist(storage)
+    storage = dacv.AnnotationStorage(storage_types=[dacv.StorageType.JSON], json_file="example_single.json")
+    annotations_existing = dacv.load_image_anns_from_storage(storage)
     
     aio = dacv.AnnotateImageLabelsAIO(
         label_source=label_source, 

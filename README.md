@@ -127,7 +127,7 @@ image_source = dac.ImageSource(images=images)
 label_source = dac.LabelSource(labels=["astronaut", "camera", "cat"])
 
 # Set up writing
-storage = dac.AnnotationStorage(storage_type=dac.AnnotationStorage.Type.JSON, json_file="annotations.json")
+storage = dac.AnnotationStorage(storage_types=[dac.StorageType.JSON], json_file="annotations.json")
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container([
