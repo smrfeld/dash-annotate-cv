@@ -32,7 +32,13 @@ if __name__ == "__main__":
     label_source = dacv.LabelSource(labels=["face", "eye", "body"])
 
     # Set up writing
-    storage = dacv.AnnotationStorage(storage_types=[dacv.StorageType.JSON], json_file="example_bboxs.json")
+    storage = dacv.AnnotationStorage(storage_types=[
+        dacv.StorageType.JSON, # Default storage type
+        dacv.StorageType.COCO # COCO storage type
+        ], 
+        json_file="example_bboxs.default.json",
+        coco_file="example_bboxs.coco.json"
+        )
     annotations_existing = dacv.load_image_anns_from_storage(storage)
     
     aio = dacv.AnnotateImageBboxsAIO(
