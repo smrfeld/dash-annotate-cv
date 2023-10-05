@@ -12,9 +12,10 @@ Supported tasks:
 - [x] Annotation of images (whole image labels)
 - [x] Annotating multiple labels per image
 - [x] Annotating bounding boxes including labels
+- [x] Support for COCO format
 
 Roadmap for future tasks:
-- [ ] Support for more annotation formats: YOLO, COCO, etc.
+- [ ] Support for more annotation formats: YOLO, etc.
 - [ ] Support for image segmentation tasks.
 - [ ] Support for skeleton annotation tasks.
 - [ ] Annotating video events
