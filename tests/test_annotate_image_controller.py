@@ -1,13 +1,15 @@
 import dash_annotate_cv as dacv
 from skimage import data
+from PIL import Image
 import pytest
 
 @pytest.fixture
 def controller():
     images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
+    images_pil = [ (name,Image.fromarray(image)) for name,image in images ]
     return dacv.AnnotateImageController(
         label_source=dacv.LabelSource(labels=["cat", "dog"]),
-        image_source=dacv.ImageSource(images=images),
+        image_source=dacv.ImageSource(images=images_pil),
         annotation_storage=dacv.AnnotationStorage(),
         options=dacv.AnnotateImageOptions()
         )

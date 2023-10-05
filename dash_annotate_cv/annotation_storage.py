@@ -1,5 +1,5 @@
 from dash_annotate_cv.formats import ImageAnnotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from mashumaro import DataClassDictMixin
 from typing import Optional, Any, List
 from enum import Enum
@@ -24,7 +24,7 @@ class AnnotationStorage(DataClassDictMixin):
         EVERY_N_OPERATIONS = "every_n_operations"
 
     # Storage type
-    storage_types: List[StorageType] = []
+    storage_types: List[StorageType] = field(default_factory=lambda: [])
 
     # JSON storage
     json_file: Optional[str] = None

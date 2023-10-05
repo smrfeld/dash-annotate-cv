@@ -6,10 +6,9 @@ import dash_annotate_cv as dacv
 from dash import Dash, html
 import dash_bootstrap_components as dbc
 from skimage import data
-import json
-import os
 import logging
 import sys
+from PIL import Image
 
 
 # Set up logging
@@ -26,9 +25,10 @@ if __name__ == "__main__":
 
     # Load some images
     images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
+    images_pil = [ (name,Image.fromarray(image)) for name,image in images ]
 
     # Set up the image and label sources
-    image_source = dacv.ImageSource(images=images)
+    image_source = dacv.ImageSource(images=images_pil)
     label_source = dacv.LabelSource(labels=["face", "eye", "body"])
 
     # Set up writing
