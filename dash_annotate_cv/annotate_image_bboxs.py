@@ -3,7 +3,7 @@ from dash_annotate_cv.annotate_image_controls import AnnotateImageControlsAIO
 from dash_annotate_cv.helpers import get_trigger_id, Xyxy
 from dash_annotate_cv.image_source import ImageSource
 from dash_annotate_cv.label_source import LabelSource
-from dash_annotate_cv.image_annotations import ImageAnnotations
+from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage
 
 from typing import Optional

@@ -1,4 +1,4 @@
-from dash_annotate_cv.helpers import Xyxy
+from dash_annotate_cv.helpers import Xyxy, Xywh, xyxy_to_xywh
 
 from typing import List, Optional, Dict, Union
 from dataclasses import dataclass
@@ -74,6 +74,52 @@ class ImageAnnotations(DataClassDictMixin):
                     return False
                 return self.xyxy == other.xyxy and self.class_name == other.class_name
 
+
+            @property
+            def area(self) -> float:
+                """
+                Compute area
+
+                Returns:
+                    float: Area of the bounding box
+                """
+                return abs(self.xyxy[2]-self.xyxy[0])*abs(self.xyxy[3]-self.xyxy[1])
+
+
+            def area_normalized(self, width: float, height: float) -> float:
+                """Compute normalized area
+
+                Args:
+                    width (float): Width of image
+                    height (float): Height of image
+
+                Returns:
+                    float: Normalized area
+                """                
+                return self.area / (width*height)
+
+
+            def ensure_valid_xyxy(self):
+                """Ensure xyxy is valid
+                """                
+                self.xyxy = [
+                    min(self.xyxy[0], self.xyxy[2]),
+                    min(self.xyxy[1], self.xyxy[3]),
+                    max(self.xyxy[0], self.xyxy[2]),
+                    max(self.xyxy[1], self.xyxy[3])
+                    ]
+
+
+            @property
+            def xywh(self) -> Xywh:
+                """Get bbox in xywh format
+
+                Returns:
+                    Xywh: XYWH format (top left x, top left y, width, height)
+                """                
+                return xyxy_to_xywh(self.xyxy)
+
+
             class Config(BaseConfig):
                 omit_none = True
 
@@ -106,6 +152,12 @@ class ImageAnnotations(DataClassDictMixin):
         history_bboxs: Optional[List[BboxHistory]] = None
         history_labels: Optional[List[Label]] = None
 
+        # Width
+        image_width: Optional[int] = None
+
+        # Height
+        image_height: Optional[int] = None
+
         class Config(BaseConfig):
             omit_none = True
 
@@ -121,7 +173,21 @@ class ImageAnnotations(DataClassDictMixin):
         return cls(image_to_entry={})
 
 
-    def get_or_add_image(self, image_name: str, with_bboxs: bool) -> Annotation:
+    def get_or_add_image(self, 
+        image_name: str, 
+        img_width: Optional[int] = None, 
+        img_height: Optional[int] = None
+        ) -> Annotation:
+        """Get an image by name if it exists, or add it
+
+        Args:
+            image_name (str): Image name
+            img_width (Optional[int], optional): Image width. Defaults to None.
+            img_height (Optional[int], optional): Image height. Defaults to None.
+
+        Returns:
+            Annotation: The existing annotation for the image, or makes and adds a new one
+        """        
         if image_name in self.image_to_entry:
             ann = self.image_to_entry[image_name]
             if ann.bboxs is None:
@@ -129,7 +195,9 @@ class ImageAnnotations(DataClassDictMixin):
         else:
             ann = ImageAnnotations.Annotation(
                 image_name=image_name,
-                bboxs=[]
+                bboxs=None,
+                image_width=img_width,
+                image_height=img_height
                 )
             self.image_to_entry[image_name] = ann
         return ann

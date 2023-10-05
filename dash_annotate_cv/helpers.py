@@ -8,6 +8,43 @@ logger = logging.getLogger(__name__)
 
 
 Xyxy = List[Union[float,int]]
+Xywh = List[Union[float,int]]
+
+
+def xyxy_to_xywh(xyxy: Xyxy) -> Xywh:
+    """Convert xyxy to xywh
+    """
+    return [ min(xyxy[0],xyxy[2]), min(xyxy[1],xyxy[3]), abs(xyxy[2] - xyxy[0]), abs(xyxy[3] - xyxy[1])]
+
+
+def xywh_to_xyxy(xywh: Xywh) -> Xyxy:
+    """Convert xywh to xyxy
+    """
+    return [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
+
+
+def normalize_xywh(xywh: Xywh, width: int, height: int) -> Xywh:
+    """Normalize xywh
+    """
+    return [xywh[0]/width, xywh[1]/height, xywh[2]/width, xywh[3]/height]
+
+
+def unnormalize_xywh(xywh: Xywh, width: int, height: int) -> Xywh:
+    """Unnormalize xywh
+    """
+    return [xywh[0]*width, xywh[1]*height, xywh[2]*width, xywh[3]*height]
+
+
+def normalize_xyxy(xyxy: Xyxy, width: int, height: int) -> Xyxy:
+    """Normalize xyxy
+    """
+    return normalize_xywh(xyxy_to_xywh(xyxy), width, height)
+
+
+def unnormalize_xyxy(xyxy: Xyxy, width: int, height: int) -> Xyxy:
+    """Unnormalize xyxy
+    """
+    return xywh_to_xyxy(unnormalize_xywh(xyxy, width, height))
 
 
 class UnknownError(Exception):

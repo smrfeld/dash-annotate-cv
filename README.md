@@ -120,14 +120,15 @@ import dash_bootstrap_components as dbc
 from skimage import data
 
 # Load some images
-images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ]
+images = [ ("chelsea",data.chelsea()), ("astronaut",data.astronaut()), ("camera",data.camera()) ] # type: ignore
+images_pil = [ (name,Image.fromarray(image)) for name,image in images ]
 
 # Set up the image and label sources
-image_source = dac.ImageSource(images=images)
+image_source = dac.ImageSource(images=images_pil)
 label_source = dac.LabelSource(labels=["astronaut", "camera", "cat"])
 
 # Set up writing
-storage = dac.AnnotationStorage(storage_type=dac.AnnotationStorage.Type.JSON, json_file="annotations.json")
+storage = dac.AnnotationStorage(storage_types=[dac.StorageType.JSON], json_file="annotations.json")
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = dbc.Container([

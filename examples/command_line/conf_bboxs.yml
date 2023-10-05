@@ -25,8 +25,11 @@ image_source:
 
 # Storage (optional)
 storage:
-  storage_type: json
-  json_file: example_bboxs.json
+  storage_types: 
+  - json # Custom JSON storage format
+  - coco # COCO storage format
+  json_file: example_bboxs.default.json
+  coco_file: example_bboxs.coco.json
 
 # Options (optional)
 options:

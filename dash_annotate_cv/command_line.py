@@ -63,7 +63,7 @@ def cli():
         conf.check_valid()
 
     # Restart from existing annotations if any
-    annotations_existing = dacv.load_image_anns_if_exist(conf.storage)
+    annotations_existing = dacv.load_image_anns_from_storage(conf.storage)
 
     # Dash app
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])

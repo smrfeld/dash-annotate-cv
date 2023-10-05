@@ -1,4 +1,4 @@
-from dash_annotate_cv.image_annotations import ImageAnnotations
+from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 from dash_annotate_cv.annotation_storage import AnnotationStorage, AnnotationWriter
 from dash_annotate_cv.image_source import ImageSource, ImageIterator, IndexAboveError
 from dash_annotate_cv.label_source import LabelSource
@@ -251,7 +251,12 @@ class AnnotateImageController:
         logger.debug(f"Adding bbox: {bbox}")
 
         # Store the annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name, 
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
 
         # Check labels are allowed
         if bbox.class_name is not None and not bbox.class_name in self._labels:
@@ -292,7 +297,12 @@ class AnnotateImageController:
             UnknownError: Unknown error
         """        
         # Update annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name,
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
         if ann.bboxs is None:
             raise UnknownError("Bboxs must be set")
         if idx >= len(ann.bboxs):
@@ -327,7 +337,12 @@ class AnnotateImageController:
             InvalidBboxError: Invalid bounding box
         """        
         # Store the annotation
-        ann = self.annotations.get_or_add_image(self._curr_image_name, with_bboxs=True)
+        ann = self.annotations.get_or_add_image(
+            image_name=self._curr_image_name,
+            img_width=self._curr.image.width if self._curr is not None else None,
+            img_height=self._curr.image.height if self._curr is not None else None, 
+            )
+        ann.bboxs = ann.bboxs or []
 
         # Update the bbox
         if ann.bboxs is None:
@@ -514,29 +529,3 @@ class AnnotateImageController:
         # Load the next image
         image_idx, image_name, image = self._image_iterator.next()
         self._update_curr(image_idx, image_name, image)
-
-
-def load_image_anns_if_exist(storage: AnnotationStorage) -> Optional[ImageAnnotations]:
-    """Load image annotations if they exist
-
-    Args:
-        storage (AnnotationStorage): Storage
-
-    Raises:
-        UnknownError: Unknown error
-
-    Returns:
-        Optional[ImageAnnotations]: Image annotations if they exist
-    """    
-    if storage.storage_type == AnnotationStorage.Type.NONE:
-        return None
-    elif storage.storage_type == AnnotationStorage.Type.JSON:
-        if storage.json_file is None:
-            raise UnknownError("json_file must be set if storage_type is JSON")
-
-        # Restart from existing annotations if any
-        if os.path.exists(storage.json_file):
-            with open(storage.json_file,"r") as f:
-                return ImageAnnotations.from_dict(json.load(f))
-        else:
-            return None
