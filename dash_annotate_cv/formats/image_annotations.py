@@ -86,6 +86,19 @@ class ImageAnnotations(DataClassDictMixin):
                 return abs(self.xyxy[2]-self.xyxy[0])*abs(self.xyxy[3]-self.xyxy[1])
 
 
+            def area_normalized(self, width: float, height: float) -> float:
+                """Compute normalized area
+
+                Args:
+                    width (float): Width of image
+                    height (float): Height of image
+
+                Returns:
+                    float: Normalized area
+                """                
+                return self.area / (width*height)
+
+
             def ensure_valid_xyxy(self):
                 """Ensure xyxy is valid
                 """                
@@ -105,6 +118,7 @@ class ImageAnnotations(DataClassDictMixin):
                     Xywh: XYWH format (top left x, top left y, width, height)
                 """                
                 return xyxy_to_xywh(self.xyxy)
+
 
             class Config(BaseConfig):
                 omit_none = True

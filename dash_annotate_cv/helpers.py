@@ -23,6 +23,30 @@ def xywh_to_xyxy(xywh: Xywh) -> Xyxy:
     return [xywh[0], xywh[1], xywh[0] + xywh[2], xywh[1] + xywh[3]]
 
 
+def normalize_xywh(xywh: Xywh, width: int, height: int) -> Xywh:
+    """Normalize xywh
+    """
+    return [xywh[0]/width, xywh[1]/height, xywh[2]/width, xywh[3]/height]
+
+
+def unnormalize_xywh(xywh: Xywh, width: int, height: int) -> Xywh:
+    """Unnormalize xywh
+    """
+    return [xywh[0]*width, xywh[1]*height, xywh[2]*width, xywh[3]*height]
+
+
+def normalize_xyxy(xyxy: Xyxy, width: int, height: int) -> Xyxy:
+    """Normalize xyxy
+    """
+    return normalize_xywh(xyxy_to_xywh(xyxy), width, height)
+
+
+def unnormalize_xyxy(xyxy: Xyxy, width: int, height: int) -> Xyxy:
+    """Unnormalize xyxy
+    """
+    return xywh_to_xyxy(unnormalize_xywh(xyxy, width, height))
+
+
 class UnknownError(Exception):
     pass
 

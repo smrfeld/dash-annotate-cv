@@ -1,4 +1,4 @@
-from dash_annotate_cv.helpers import xywh_to_xyxy
+from dash_annotate_cv.helpers import xywh_to_xyxy, normalize_xywh, unnormalize_xywh
 from dash_annotate_cv.formats.image_annotations import ImageAnnotations
 
 import json
@@ -17,21 +17,26 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
     ann_id_next = 1
     cat_id_next = 1
     coco_dct: Dict = {"images": [], "annotations": [], "categories": []}
-    for anns_for_img in anns.image_to_entry.values():
+    for ann in anns.image_to_entry.values():
+
+        # Only write if width and height specified
+        if ann.image_width is None or ann.image_height is None:
+            logger.warning(f"Skipping writing image with no specified width or height to COCO format: {ann}")
+            continue
 
         # Add image
         img = {
             "id": image_id_next,
-            "width": anns_for_img.image_width,
-            "height": anns_for_img.image_height,
-            "file_name": anns_for_img.image_name
+            "width": ann.image_width,
+            "height": ann.image_height,
+            "file_name": ann.image_name
             }
         coco_dct["images"].append(img)
         image_id_next += 1
         image_id = image_id_next - 1
 
         # Add annotations
-        for bbox in anns_for_img.bboxs or []:
+        for bbox in ann.bboxs or []:
 
             # Skip bboxs with no class name
             if bbox.class_name is None:
@@ -39,7 +44,7 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
                 continue
                 
             # Skip bboxs with area <= 0
-            if bbox.area <= 0:
+            if bbox.area_normalized(ann.image_width, ann.image_height) <= 0:
                 logger.warning(f"Skipping writing bbox with area <= 0 to COCO format: {bbox}")
                 continue
 
@@ -54,16 +59,16 @@ def write_to_coco(anns: ImageAnnotations, fname_output_json: str):
                 cat_id_next += 1
             cat_id = [ cat["id"] for cat in coco_dct["categories"] if cat["name"] == bbox.class_name ][0]
 
-            ann = {
+            ann_dct = {
                 "id": ann_id_next,
                 "image_id": image_id,
                 "category_id": cat_id,
                 "segmentation": [],
-                "bbox": bbox.xywh,
-                "area": bbox.area,
+                "bbox": normalize_xywh(bbox.xyxy, ann.image_width, ann.image_height),
+                "area": bbox.area_normalized(ann.image_width, ann.image_height),
                 "iscrowd": 0
                 }
-            coco_dct["annotations"].append(ann)
+            coco_dct["annotations"].append(ann_dct)
             ann_id_next += 1
 
     if os.path.dirname(fname_output_json) != "":
@@ -106,9 +111,14 @@ def load_from_coco_if_exist(fname_json: str) -> Optional[ImageAnnotations]:
         cat_dct = cat_dct_cands[0]
         class_name = cat_dct["name"]
 
+        # Bounding box
+        xywh_normalized = ann["bbox"]
+        xywh_unnormalized = unnormalize_xywh(xywh_normalized, img_dct["width"], img_dct["height"])
+        xyxy_unnormalized = xywh_to_xyxy(xywh_unnormalized)
+
         # Add bounding box
         bbox = ImageAnnotations.Annotation.Bbox(
-            xyxy=xywh_to_xyxy(ann["bbox"]),
+            xyxy=xyxy_unnormalized,
             class_name=class_name
             )
         if image.bboxs is None:
